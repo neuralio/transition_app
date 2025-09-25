@@ -136,3 +136,6 @@ project-root/
 
 - Make sure to add `docker-compose.yml`, `nginx/nginx.conf`, `frontend/esa-chat-ui/vite.config.js`, `frontend/esa-chat-ui/.env`, `backend/.env`, and `.env` to your `.gitignore` file to avoid committing environment-specific configurations
 - Always verify your configuration files after copying from templates
+
+## Authors
+Developed by Fotini Patrona for the ESA AGENTS project
