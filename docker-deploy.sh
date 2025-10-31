@@ -25,7 +25,7 @@ if [ ! -f .env ]; then
         cp .env.docker .env
         echo -e "${GREEN}✓ Created .env file from template${NC}"
         echo ""
-        echo -e "${RED}IMPORTANT: Edit .env file and add your OPENAI_API_KEY!${NC}"
+        echo -e "${RED}IMPORTANT: Edit .env file and add your API_KEY!${NC}"
         echo "Run: nano .env"
         echo ""
         read -p "Press Enter after you've configured .env, or Ctrl+C to exit..."
@@ -35,10 +35,10 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# Check if OPENAI_API_KEY is set
-if grep -q "your_openai_api_key_here" .env; then
-    echo -e "${RED}Error: OPENAI_API_KEY not configured in .env!${NC}"
-    echo "Please edit .env and add your actual OpenAI API key."
+# Check if API_KEY is set
+if grep -q "your_api_key_here" .env; then
+    echo -e "${RED}Error: API_KEY not configured in .env!${NC}"
+    echo "Please edit .env and add your actual API key."
     exit 1
 fi
 
