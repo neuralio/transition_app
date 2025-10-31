@@ -164,7 +164,7 @@ python -c "import mesa; import torch; print('✅ Python dependencies installed s
 #### Step 3: Configure Environment Variables
 
 ```bash
-# Create .env file (required for OpenAI API)
+# Create .env file (required for the LLM's API)
 cat > .env << 'EOF'
 # API Key (REQUIRED for LLM interface)
 API_KEY=your_api_key_here
