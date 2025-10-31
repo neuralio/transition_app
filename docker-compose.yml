@@ -10,7 +10,7 @@ services:
     ports:
       - "8003:8003"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - API_KEY=${API_KEY}
       - BACKEND_URL=http://localhost:8003
       - SH_CLIENT_ID=${SH_CLIENT_ID:-}
       - SH_CLIENT_SECRET=${SH_CLIENT_SECRET:-}
