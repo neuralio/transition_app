@@ -62,13 +62,13 @@ def create_query_parser():
     """Create LLM-powered query parser using GPT-4"""
 
     # Check API key
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("API_KEY")
     if not api_key:
-        print("❌ ERROR: Set OPENAI_API_KEY environment variable")
-        print("   export OPENAI_API_KEY='your-key'")
+        print("❌ ERROR: Set API_KEY environment variable")
+        print("   export API_KEY='your-key'")
         sys.exit(1)
 
-    # Setup OpenAI client with instructor
+    # Setup client with instructor
     client = instructor.from_openai(OpenAI(api_key=api_key))
 
     # System prompt for query parsing
@@ -577,7 +577,7 @@ def main():
         if parsed.tool == "chat":
             # Handle casual conversation with ChatGPT
             from openai import OpenAI
-            chat_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            chat_client = OpenAI(api_key=os.getenv("API_KEY"))
 
             response = chat_client.chat.completions.create(
                 model="gpt-4",
