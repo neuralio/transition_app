@@ -28,8 +28,8 @@ TRANSITION is a climate-resilience platform that creates spatial digital twins t
 ### Backend First, Frontend Last
 
 **Development Priority:**
-1. ✅ Backend (FastAPI, Mesa ML-ABM, RL, EO Data) - **COMPLETE FIRST**
-2. Frontend (Next.js, React, Visualization) - **START LAST**
+1. ✅ Backend (FastAPI, Mesa ML-ABM, RL, EO Data) 
+2. Frontend (Next.js, React, Visualization) 
 
 ### Tech Stack
 
@@ -47,33 +47,7 @@ TRANSITION is a climate-resilience platform that creates spatial digital twins t
 - Dark/Light theme support
 - Leaflet.js, Recharts (planned)
 
----
-
-## 👥 Team Structure
-
-This project is designed for **2 developers working in parallel**:
-
-### Developer 1: ML-ABM & Simulation Engine
-- Mesa ABM framework
-- PECS framework implementation
-- RL integration (Gymnasium/SB3)
-- EO data processing (Rasterio/xarray)
-- Climate scenario loader (CMIP6)
-
-### Developer 2: API Backend & Infrastructure
-- FastAPI REST API
-- Database architecture (PostgreSQL/PostGIS)
-- Authentication & authorization (JWT)
-- DevOps & deployment (Docker/Kubernetes)
-- CI/CD pipelines (GitHub Actions)
-
-**See [PARALLEL-DEVELOPMENT.md](PARALLEL-DEVELOPMENT.md) for detailed workflow.**
-
----
-
 ## 🚀 Quick Start
-
-**📖 For complete setup instructions, see [DEVELOPER_SETUP.md](DEVELOPER_SETUP.md)**
 
 ### Prerequisites
 
@@ -87,21 +61,21 @@ Optional (for production):
 - Redis 7.x
 - Docker Desktop
 
-### Complete Deployment Guide (New PC Setup)
+### Complete Deployment Guide 
 
 Follow these steps to deploy TRANSITION on a new machine:
 
 **🚀 Quick Start (for `uv` users):**
 ```bash
 # 1. Clone
-git clone <repo-url> && cd Transition
+git clone <repo-url> && cd transition_app
 
 # 2. Python setup with uv (fast!)
 uv venv esa && source esa/bin/activate
 uv pip sync requirements.txt
 
 # 3. Create .env with API key
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
+echo "API_KEY=sk-your-key-here" > .env
 
 # 4. Frontend setup
 cd frontend && npm install && cd ..
@@ -192,22 +166,15 @@ python -c "import mesa; import torch; print('✅ Python dependencies installed s
 ```bash
 # Create .env file (required for OpenAI API)
 cat > .env << 'EOF'
-# OpenAI API Key (REQUIRED for LLM interface)
-OPENAI_API_KEY=your_openai_api_key_here
+# API Key (REQUIRED for LLM interface)
+API_KEY=your_api_key_here
 
 # Backend URL (default: http://localhost:8000)
 BACKEND_URL=http://localhost:8000
 
-# Sentinel Hub credentials (optional - for EO data download)
-SH_CLIENT_ID=your_sentinel_hub_client_id
-SH_CLIENT_SECRET=your_sentinel_hub_client_secret
-EOF
-
 # Edit .env file and add your actual API keys
 nano .env  # or use any text editor
 ```
-
-**⚠️ CRITICAL:** Get your OpenAI API key from https://platform.openai.com/api-keys
 
 #### Step 4: Frontend Setup (Node.js)
 
@@ -222,21 +189,7 @@ npm install
 cd ..
 ```
 
-#### Step 5: Download Required Data
-
-**Option A: Use Existing Data (Thessaloniki Pilot)**
-```bash
-# Data should be in: /home/ggous/Downloads/PILOT_THESSALONIKI_DATA
-# If not present, download from shared storage or contact team lead
-```
-
-**Option B: Download Your Own Region**
-```bash
-# See use_cases/*/Sentinel/ directories for data download scripts
-# Requires Sentinel Hub account: https://www.sentinel-hub.com/
-```
-
-#### Step 6: Start the Application
+#### Step 5: Start the Application
 
 **Open 2 Terminal Windows:**
 
@@ -282,23 +235,6 @@ npm run dev
 curl http://localhost:8000/api/health
 # Should return: {"status":"healthy"}
 ```
-
-**Test Simulation (Python - keep backend running):**
-```bash
-# In new terminal with Python environment activated
-source esa/bin/activate  # If using uv
-# source venv/bin/activate  # If using standard pip
-
-# Test MLU simulation
-python use_cases/mlu/run_mlu.py --query mlu_04 --parcels 10 --scenario moderate
-
-# Test CCA simulation
-python use_cases/cca/run_cca.py --query cca_03 --crop WHEAT --scenario moderate --farmers 20
-
-# Test Irrigation simulation
-python use_cases/irrigation/run_irrigation.py --query irr_01 --start-date 2025-07-01 --end-date 2025-07-04
-```
-
 ---
 
 ### 🚨 Troubleshooting Common Issues
@@ -309,14 +245,14 @@ python use_cases/irrigation/run_irrigation.py --query irr_01 --start-date 2025-0
 pip install --force-reinstall -r requirements.txt
 ```
 
-#### Issue 2: "OPENAI_API_KEY not found"
+#### Issue 2: "API_KEY not found"
 ```bash
 # Check .env file exists and has your key
-cat .env | grep OPENAI_API_KEY
+cat .env | grep API_KEY
 
 # Set temporarily in terminal
-export OPENAI_API_KEY='your-key-here'  # Linux/macOS
-# $env:OPENAI_API_KEY='your-key-here'  # Windows PowerShell
+export API_KEY='your-key-here'  # Linux/macOS
+# $env:API_KEY='your-key-here'  # Windows PowerShell
 ```
 
 #### Issue 3: Frontend won't start
@@ -328,13 +264,7 @@ npm cache clean --force
 npm install
 ```
 
-#### Issue 4: Backend timeout errors
-```bash
-# Increase timeout (already configured for long-running phenology analysis)
-# If still issues, check network connection to Sentinel Hub API
-```
-
-#### Issue 5: Port already in use
+#### Issue 4: Port already in use
 ```bash
 # Backend (port 8000)
 lsof -ti:8000 | xargs kill -9  # Linux/macOS
@@ -343,49 +273,19 @@ lsof -ti:8000 | xargs kill -9  # Linux/macOS
 # Frontend (port 3000)
 lsof -ti:3000 | xargs kill -9  # Linux/macOS
 ```
-
----
-
-### 🔄 Daily Development Workflow
-
-```bash
-# Morning: Start servers
-# Terminal 1 - Backend
-source esa/bin/activate  # If using uv
-# source venv/bin/activate  # If using standard pip
-python backend/api/server.py
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-
-# Access: http://localhost:3000
-
-# Evening: Stop servers
-# Press Ctrl+C in both terminals
-```
-
 ---
 
 ### 📦 Production Deployment
 
-**Coming soon:** Docker Compose setup for one-command deployment
-
 ```bash
-# Future: One-command deployment (not yet implemented)
-docker-compose up -d
+docker-compose up --build -d
 ```
-
-**📖 For detailed setup instructions, troubleshooting, and team workflow, see [DEVELOPER_SETUP.md](DEVELOPER_SETUP.md)**
-
-**📖 For frontend-specific documentation, see [frontend/SETUP.md](frontend/SETUP.md) and [FRONTEND_QUICKSTART.md](FRONTEND_QUICKSTART.md)**
-
 ---
 
 ## 📁 Project Structure
 
 ```
-TRANSITION/
+transition_app/
 │
 ├── backend/                    # Backend code (Python)
 │   ├── api/                   # FastAPI (Dev2 PRIMARY)
@@ -402,143 +302,11 @@ TRANSITION/
 │   ├── kubernetes/
 │   └── terraform/
 │
-├── docs/                      # SHARED documentation
-│   ├── API.md
-│   ├── SIMULATION.md
-│   └── DEPLOYMENT.md
-│
-├── CLAUDE.md                  # AI assistant rules
-├── PRD.md                     # Product requirements
-├── PLANNING.md                # Technical planning
-├── ARCHITECTURE.md            # System architecture
-├── TASKS.md                   # Task breakdown
-├── PARALLEL-DEVELOPMENT.md    # Developer workflow
 └── README.md                  # This file
 ```
-
 ---
 
-## 🌿 Git Workflow
-
-### Branches
-
-```
-main (production)
-  ↓
-develop (integration)
-  ↓
-  ├── feature/dev1-mesa-agents
-  ├── feature/dev1-eo-pipeline
-  ├── feature/dev2-api-auth
-  └── feature/dev2-database-schema
-```
-
-### Feature Branch Workflow
-
-```bash
-# Start new feature (Developer 1 example)
-git checkout develop
-git pull origin develop
-git checkout -b feature/dev1-mesa-agents
-
-# Work on feature
-git add .
-git commit -m "feat(simulation): Add FarmerAgent with PECS framework"
-
-# Push and create PR
-git push origin feature/dev1-mesa-agents
-# Create Pull Request to develop on GitHub
-```
-
-**See [PARALLEL-DEVELOPMENT.md](PARALLEL-DEVELOPMENT.md) for complete branching strategy.**
-
----
-
-## 📚 Documentation
-
-### Core Documents
-
-- **[CLAUDE.md](CLAUDE.md)** - AI assistant rules (ALWAYS use Context7 MCP)
-- **[PRD.md](PRD.md)** - Product requirements (1,986 lines)
-- **[PLANNING.md](PLANNING.md)** - Technical planning with ML-ABM architecture
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture (600+ lines)
-- **[TASKS.md](TASKS.md)** - Development task list (140+ tasks, 5 milestones)
-- **[PARALLEL-DEVELOPMENT.md](PARALLEL-DEVELOPMENT.md)** - Two-developer workflow
-- **[ML-ABM-REQUIREMENTS.md](ML-ABM-REQUIREMENTS.md)** - ML-ABM specifications (300+ lines)
-- **[RL-IMPLEMENTATION.md](RL-IMPLEMENTATION.md)** - RL guide (400+ lines)
-- **[CONTEXT7-REFERENCE.md](CONTEXT7-REFERENCE.md)** - Context7 MCP quick reference
-
-### Mesa Tutorials
-
-Saved Mesa tutorials for reference:
-- [mesa-tutorials/README.md](mesa-tutorials/README.md) - Tutorial index
-- [mesa-tutorials/00-wealth-model.md](mesa-tutorials/00-wealth-model.md) - Foundation tutorial
-- [mesa-tutorials/01-adding-space.md](mesa-tutorials/01-adding-space.md) - Spatial ABM
-- [mesa-tutorials/02-collecting-data.md](mesa-tutorials/02-collecting-data.md) - Data collection
-- [mesa-tutorials/03-best-practices.md](mesa-tutorials/03-best-practices.md) - Production patterns
-
----
-
-## 🧪 Testing
-
-### Run All Tests
-
-```bash
-# All tests
-pytest backend/tests/
-
-# With coverage
-pytest --cov=backend backend/tests/
-
-# Specific module
-pytest backend/tests/test_simulation/
-pytest backend/tests/test_api/
-```
-
-### Test Strategy
-
-- **Unit Tests**: Each developer tests their modules
-- **Integration Tests**: Both test service interfaces together
-- **E2E Tests**: Full workflow (API → Mesa → Results)
-
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/transition
-POSTGRES_USER=transition_user
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=transition
-
-# Redis
-REDIS_URL=redis://localhost:6379/0
-
-# MongoDB
-MONGO_URL=mongodb://localhost:27017/transition
-
-# API
-SECRET_KEY=your_secret_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# Environment
-ENVIRONMENT=development
-DEBUG=True
-
-# EO Data Credentials
-COPERNICUS_USERNAME=your_username
-COPERNICUS_PASSWORD=your_password
-```
-
-**⚠️ NEVER commit `.env` to Git!**
-
----
-
-## 🐳 Docker Setup (Optional)
+## 🐳 Docker Setup 
 
 ```bash
 # Build and run all services
@@ -557,16 +325,13 @@ docker-compose down
 
 ### Real Data ONLY
 
-- **100% EO-informed data** from Sentinel, Landsat, MODIS, CMIP6, ERA5
+- **100% EO-informed data** from Sentinel, CMIP6, ERA5
 - **NO dummy/mock/synthetic data** anywhere in the codebase
 - **Validation**: RMSE < 15% against historical observations (2000-2020)
 
 ### Data Sources
 
-- **Sentinel-2**: Optical imagery (10m resolution)
 - **Sentinel-1**: SAR imagery (soil moisture)
-- **Landsat 8/9**: Multispectral imagery
-- **MODIS**: Global land cover
 - **CMIP6**: Climate scenarios (RCP 2.6, 4.5, 6.0, 8.5)
 - **ERA5**: Climate reanalysis
 
@@ -622,8 +387,6 @@ mcp__context7__get-library-docs → {
 - xarray: `/pydata/xarray`
 - FastAPI: `/tiangolo/fastapi`
 
-**See [CONTEXT7-REFERENCE.md](CONTEXT7-REFERENCE.md) for complete reference.**
-
 ---
 
 ## 🤝 Contributing
@@ -657,45 +420,7 @@ ruff check backend/ --fix
 # Type check
 mypy backend/
 ```
-
 ---
-
-## 📅 Development Timeline
-
-### Phase 1: Foundation (Months 1-2)
-- ✅ Development environment setup
-- ✅ Database schema & migrations
-- ✅ Basic API endpoints
-- ✅ Mesa ABM framework setup
-
-### Phase 2: Core Features (Months 3-5)
-- 4-level ML-ABM architecture
-- Real EO data ingestion
-- PECS framework implementation
-- API endpoints for simulation CRUD
-
-### Phase 3: RL Integration (Months 6-8)
-- Gymnasium environment wrapper
-- PPO training pipeline
-- Hybrid decision-making (rule + RL)
-
-### Phase 4: Production (Months 9-12)
-- Testing & validation
-- Kubernetes deployment
-- CI/CD pipelines
-- Monitoring & logging
-
-**See [TASKS.md](TASKS.md) for detailed task breakdown.**
-
----
-
-## 📞 Support
-
-### Documentation
-
-- Read [PARALLEL-DEVELOPMENT.md](PARALLEL-DEVELOPMENT.md) for team workflow
-- Check [ARCHITECTURE.md](ARCHITECTURE.md) for system design
-- Review [TASKS.md](TASKS.md) for task assignments
 
 ### Issues
 
@@ -703,12 +428,6 @@ Create a GitHub issue for:
 - Bug reports
 - Feature requests
 - Documentation improvements
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
