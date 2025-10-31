@@ -1,0 +1,128 @@
+# EO-Informed Irrigation Simulation Configuration
+# REGION-AGNOSTIC - Supports any European country
+
+# ==============================================================================
+# REGION CONFIGURATION (user-defined)
+# ==============================================================================
+region:
+  # Region name (descriptive only - filled from user input or derived from location)
+  name: "{{REGION_NAME_PLACEHOLDER}}"
+
+  # Bounding box [lon_min, lat_min, lon_max, lat_max]
+  # FILLED from user-drawn polygons in frontend
+  bbox: {{BBOX_PLACEHOLDER}}
+
+  # Climate zone classification (filled from geographic location)
+  # Options: Mediterranean, Continental, Oceanic, Subarctic
+  climate_zone: "{{CLIMATE_ZONE_PLACEHOLDER}}"
+
+  # Country (filled from geographic location)
+  country: "{{COUNTRY_PLACEHOLDER}}"
+
+# ==============================================================================
+# EARTH OBSERVATION DATA CONFIGURATION
+# ==============================================================================
+sentinel:
+  # STAC endpoint for Sentinel-2 data
+  stac_url: "https://earth-search.aws.element84.com/v1"
+
+  # Cloud cover threshold (0-100)
+  cloud_cover_threshold: 100.0
+
+  # Ignore cloud filter (download all scenes)
+  ignore_cloud_filter: true
+
+  # Indices to compute
+  indices: ["NDVI", "NDWI"]
+
+  # Output directory for downloaded data
+  output_dir: "./ndvi_data"
+
+  # Compression format
+  compress: "lzw"
+
+  # Create RGB composites
+  create_rgb: true
+
+  # Cloud masking
+  create_cloud_masked_products: true
+
+# ==============================================================================
+# CROP CALENDAR (region-specific)
+# ==============================================================================
+# Path to crop calendar file (relative to this config file)
+# Available options:
+#   - crop_calendars/mediterranean.yaml (Greece, Italy, Spain, Portugal)
+#   - crop_calendars/continental.yaml (Poland, Germany, Czech Republic)
+#   - crop_calendars/oceanic.yaml (France, UK, Ireland)
+crop_calendar_file: "crop_calendars/mediterranean.yaml"
+
+# ==============================================================================
+# EO CLASSIFICATION THRESHOLDS
+# ==============================================================================
+# Path to EO thresholds file (relative to this config file)
+# Default works for most European regions
+eo_thresholds_file: "eo_thresholds/default.yaml"
+
+# ==============================================================================
+# MULTI-LEVEL ABM CONFIGURATION
+# ==============================================================================
+multilevel:
+  # Enable multi-level ABM (4 levels: Individual, Community, Market, Policy)
+  enabled: true
+
+  # Number of water cooperatives (Community level)
+  n_cooperatives: 2
+
+  # Number of commodity markets (Market level - optional for irrigation)
+  n_markets: 1
+
+  # Number of water authorities (Policy level)
+  n_water_authorities: 1
+
+# ==============================================================================
+# SIMULATION PARAMETERS
+# ==============================================================================
+simulation:
+  # Simulation duration (years)
+  duration_years: 5
+
+  # Number of land parcels (Individual level)
+  n_parcels: 100
+
+  # Initial year
+  start_year: 2021
+
+  # Ensemble mode (Monte Carlo simulations)
+  ensemble:
+    enabled: false
+    size: 30  # Number of runs
+    confidence_level: 0.95  # 95% confidence intervals
+
+# ==============================================================================
+# DATA SOURCES
+# ==============================================================================
+data:
+  # Path to Sentinel-2 data directory
+  sentinel_data_dir: "/home/ggous/Downloads/PILOT_THESSALONIKI_DATA"
+
+  # Path to climate projections (if using future scenarios)
+  climate_projections_dir: "/home/ggous/Downloads/PILOT_THESSALONIKI_DATA/Historical"
+
+  # Path to soil data
+  soil_data_dir: "/home/ggous/Downloads/PILOT_THESSALONIKI_DATA"
+
+# ==============================================================================
+# OUTPUT CONFIGURATION
+# ==============================================================================
+output:
+  # Output directory for simulation results
+  results_dir: "./irrigation_results"
+
+  # Timestamped folders (to prevent overwrites)
+  use_timestamps: true
+
+  # Save formats
+  save_geojson: true
+  save_plots: true
+  save_csv: true

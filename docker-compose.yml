@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: transition-backend
+    ports:
+      - "8003:8003"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BACKEND_URL=http://localhost:8003
+      - SH_CLIENT_ID=${SH_CLIENT_ID:-}
+      - SH_CLIENT_SECRET=${SH_CLIENT_SECRET:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data directory for EO data access
+      - ${DATA_PATH:-/home/ggous/Downloads/PILOT_THESSALONIKI_DATA}:/data:ro
+      # Mount results directory for output
+      - ./results:/app/results
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount temp directory for GeoJSON files
+      - ./temp:/app/temp
+      # Mount source code for development (optional - comment out for production)
+      - ./backend:/app/backend
+      - ./use_cases:/app/use_cases
+      - ./llm_interface:/app/llm_interface
+    restart: unless-stopped
+    networks:
+      - transition-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8003/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: transition-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # BACKEND_URL: Server-side Next.js uses internal Docker network (HTTP is OK here - internal only)
+      - BACKEND_URL=http://backend:8003
+      # NEXT_PUBLIC_API_URL: Client-side browser uses external HTTPS domain
+      - NEXT_PUBLIC_API_URL=https://transitionbackend.neuralio.ai
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - transition-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  transition-network:
+    driver: bridge
+
+volumes:
+  results:
+  logs:
+  temp:

@@ -1,0 +1,258 @@
+# TRANSITION CCA Use Case Configuration
+# Climate Change Adaptation (CCA): Farmer Adaptation & PV Adoption Decision Modeling
+
+# Data paths
+data:
+  # Path to PILOT_THESSALONIKI_DATA directory
+  # CCA uses same data source as MLU for consistency
+  base_path: "/app/data"
+
+  # Alternative: Use relative path from project root
+  # base_path: "../data/PILOT_THESSALONIKI_DATA"
+
+  # Data subdirectories
+  subdirs:
+    meteo: "meteo"
+    soil: "soil"
+    dem: "DEM"
+    yield: "yield"
+    historical: "Historical"
+    crops:
+      wheat: "WHEAT"
+      maize: "MAIZE"
+
+  # Data filenames
+  files:
+    # Future meteorological data (RCP scenarios)
+    temperature: "tas_{scenario}.nc"  # {scenario} = rcp26/rcp45/rcp85
+    precipitation: "pr_{scenario}.nc"
+    solar_radiation: "rsds_{scenario}.nc"
+    evapotranspiration: "evptsp_{scenario}.nc"
+
+    # Historical meteorological data (ERA5 reanalysis)
+    historical_temperature: "ERA5_LAND_TMP_MEAN.nc"
+    historical_precipitation: "ERA5_LAND_RAIN.nc"
+    historical_solar_radiation: "ERA5_LAND_SOLAR.nc"
+    historical_evapotranspiration: "ERA5_LAND_EVPT.nc"
+
+    # Crop suitability data
+    lusa_predictions: "LUSA_PREDICTIONS_{scenario}.nc"  # {scenario} = RCP26/RCP45/RCP85
+    lusa_historical: "PAST_LUSA_PREDICTIONS.nc"
+
+    # Yield data (AquaCrop)
+    yield_rcp26: "AquaCrop_Results_RCP26_PILOT_THESSALONIKI.csv"
+    yield_rcp45: "AquaCrop_Results_RCP45_PILOT_THESSALONIKI.csv"
+    yield_rcp85: "AquaCrop_Results_RCP85_PILOT_THESSALONIKI.csv"
+    yield_historical: "AquaCrop_Results_PAST.csv"
+
+    # Soil data
+    soil_type: "soil_type.nc"
+    soil_cec: "cec.nc"
+    soil_ph: "ph.nc"
+    soil_organic_carbon: "organic_carbon.nc"
+
+    # Terrain data
+    dem: "dem.nc"
+
+# Simulation parameters
+simulation:
+  # Default number of farmers (each decides: farm OR switch to PV)
+  n_farmers: 10
+
+  # Simulation duration in years (CCA typically uses longer horizons)
+  n_years: 10
+
+  # Climate scenarios (user-friendly names mapped to RCP identifiers)
+  # Users can specify: optimistic, moderate, pessimistic
+  # System internally maps to: rcp26, rcp45, rcp85
+  scenario_mapping:
+    optimistic: rcp26  # Low Warming (~2°C) - Ambitious mitigation
+    moderate: rcp45    # Medium Warming (~3°C) - Moderate mitigation
+    pessimistic: rcp85 # High Warming (~4-5°C) - High emissions
+
+  # Default scenarios to run (internal RCP codes)
+  scenarios:
+    - rcp26
+    - rcp45
+    - rcp85
+
+  # Scenario descriptions for visualizations
+  scenario_descriptions:
+    rcp26: "Optimistic (Low Warming ~2°C)"
+    rcp45: "Moderate (Medium Warming ~3°C)"
+    rcp85: "Pessimistic (High Warming ~4-5°C)"
+
+  # NO ENSEMBLE MODE for CCA user stories (CCA-03, CCA-04, CCA-10)
+  # CCA focuses on deterministic multi-level interactions, not probabilistic uncertainty
+  # If ensemble needed in future, use MLU's ensemble_runner.py as template
+  ensemble_enabled: false
+
+# Region boundaries (Thessaloniki)
+# EXACT coordinates from meteorological NetCDF files (evptsp_rcp85.nc)
+# Source: /home/ggous/Downloads/PILOT_THESSALONIKI_DATA/meteo/evptsp_rcp85.nc
+region:
+  name: "Thessaloniki, Greece"
+
+  # Exact bounds (ALL meteorological files use these)
+  lat_min: 40.4
+  lat_max: 40.9
+  lon_min: 22.5
+  lon_max: 22.9
+
+  # IMPORTANT: Latitude coordinate order
+  # - Meteorological files (tas, pr, rsds, evptsp): lat is DESCENDING [40.9, 40.8, 40.7, 40.6, 40.5, 40.4]
+  # - LUSA files: lat is ASCENDING [34.0, 34.1, ..., 42.9, 43.0]
+  # When using xarray.sel(lat=slice(...)):
+  #   - For meteorological files: use slice(lat_max, lat_min)  # REVERSED
+  #   - For LUSA files: use slice(lat_min, lat_max)  # NORMAL
+  lat_descending: true  # True for meteorological files, False for LUSA files
+
+  # Actual coordinate values in meteorological files
+  lat_values: [40.9, 40.8, 40.7, 40.6, 40.5, 40.4]  # 6 points
+  lon_values: [22.5, 22.6, 22.7, 22.8, 22.9]  # 5 points
+
+# Crops to model
+crops:
+  - WHEAT
+  - MAIZE
+
+# Output settings
+output:
+  # Results directory (relative to use_cases/cca/)
+  results_dir: "results"
+
+  # Enable GIS visualization
+  enable_gis_maps: true
+
+  # Enable trade-off analysis charts
+  enable_charts: true
+
+  # Query-specific output directories (aligned with MLU pattern)
+  query_dirs:
+    cca_03: "cca_03"  # Crop yield simulation
+    cca_04: "cca_04"  # PV suitability evaluation
+    cca_10: "cca_10"  # Cross-scale interactions
+
+# Solar PV parameters (CCA-04 specific)
+solar_pv:
+  # Default PV capacity per parcel (kW)
+  # Larger than MLU because CCA uses farm-scale installations
+  capacity_kw: 600.0  # 600 kW per hectare
+
+  # Panel efficiency (0-1)
+  efficiency: 0.18
+
+  # Annual degradation rate
+  degradation_rate: 0.005
+
+  # Installation cost (€/kW)
+  installation_cost_per_kw: 600.0  # Utility-scale EU solar cost
+
+  # PV lifetime (years)
+  lifetime_years: 25
+
+  # Maintenance cost rate (% of initial cost per year)
+  maintenance_cost_rate: 0.02  # 2%
+
+  # Land lease rate to farmers (€/hectare/year)
+  land_lease_rate: 500.0
+
+  # Electricity price (€/kWh, wholesale)
+  electricity_price: 0.10
+
+  # Green credit rate (€/kWh, set by policy)
+  # Default value, can be adjusted by PolicymakerAgent
+  green_credit_rate: 0.02
+
+  # PV developer investment capacity (€)
+  developer_investment_capacity: 5000000.0  # 5M euros per company
+
+# Agriculture parameters (CCA-03 specific)
+agriculture:
+  # Default farm size (hectares)
+  # CCA uses realistic EU farm sizes with variation (5-20 ha)
+  land_hectares_min: 5.0
+  land_hectares_max: 20.0
+
+  # Crop prices (€/ton)
+  crop_prices:
+    WHEAT: 200.0
+    MAIZE: 180.0
+
+  # Production costs (€/hectare)
+  production_costs:
+    WHEAT: 100.0
+    MAIZE: 150.0
+
+# Multi-level ABM settings (DEFAULT: ENABLED)
+# Required for CCA-10 (Simulate Cross-Scale Interactions)
+multilevel:
+  # Enable multi-level ABM (Individual, Community, Market, Policy)
+  # TRUE by default - provides full 4-level ML-ABM workflow
+  enabled: true
+
+  # Number of farmer collectives (community level)
+  n_collectives: 2
+
+  # Number of commodity markets (market level)
+  n_markets: 1
+
+  # Number of policymakers (policy level)
+  n_policymakers: 1
+
+  # Number of PV developers (CCA-specific, market level)
+  # Set to 0 to disable PV installation modeling
+  # Set to 1+ to enable PV adoption decisions (CCA-04)
+  n_pv_developers: 0  # Default: disabled, enable with --pv-developers flag
+
+# Climate resilience parameters (CCA-specific)
+# Used by FarmerAgent for vulnerability assessment
+climate_resilience:
+  # Temporal amplification rates by scenario (per year)
+  # How fast climate risks increase over time
+  temporal_amplification:
+    rcp26: 0.01   # +1% per year
+    rcp45: 0.02   # +2% per year
+    rcp85: 0.035  # +3.5% per year
+
+  # Drought threshold (precipitation, mm/day)
+  drought_threshold: 1.0
+
+  # Heatwave threshold (temperature, °C)
+  heatwave_threshold: 30.0
+
+  # Flood threshold (precipitation, mm/day)
+  flood_threshold: 10.0
+
+  # Adaptation capacity scaling factors
+  adaptation_capacity:
+    economic_weight: 0.35    # Income matters most
+    asset_weight: 0.25       # Farm size
+    social_weight: 0.20      # Collective membership
+    knowledge_weight: 0.20   # Experience (years farmed)
+
+  # Vulnerability calculation weights
+  vulnerability:
+    exposure_weight: 0.45         # Climate hazards
+    adaptive_capacity_weight: 0.35  # Ability to respond
+    sensitivity_weight: 0.20       # Intrinsic sensitivity
+
+# Historical validation settings (optional)
+validation:
+  # Enable historical validation (2010-2020)
+  enabled: false
+
+  # Historical period
+  start_year: 2010
+  end_year: 2020
+
+  # Target accuracy (RMSE < 15%)
+  rmse_target_percentage: 15.0
+
+  # Metrics to validate
+  metrics:
+    - wheat_yield_t_per_ha
+    - maize_yield_t_per_ha
+    - wheat_fraction
+    - maize_fraction
+    - avg_income_per_farmer

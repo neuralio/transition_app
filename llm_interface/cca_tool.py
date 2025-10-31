@@ -1,0 +1,638 @@
+#!/usr/bin/env python3
+"""
+CCA Tool - Handles Climate Change Adaptation queries (CCA-03, CCA-04, CCA-10)
+"""
+import subprocess
+import sys
+import importlib.util
+from pathlib import Path
+from atomic_agents import BaseTool, BaseToolConfig, BaseIOSchema
+from pydantic import Field
+
+# Import scenario utilities using explicit module loading to avoid import conflicts
+_cca_scenario_utils_path = Path(__file__).parent.parent / "use_cases" / "cca" / "utils" / "scenario_utils.py"
+_spec = importlib.util.spec_from_file_location("cca_scenario_utils_tool", _cca_scenario_utils_path)
+_cca_scenario_utils = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_cca_scenario_utils)
+normalize_scenario = _cca_scenario_utils.normalize_scenario
+
+
+# Input Schema
+class CCAQueryInput(BaseIOSchema):
+    """Input for CCA queries"""
+    query: str = Field(..., description="User's natural language query about climate adaptation")
+    user_story: str | None = Field(None, description="User story ID (e.g., CCA-03, CCA-04, CCA-10) - if provided by LLM")
+    scenario: str | None = Field(None, description="Climate scenario: rcp26, rcp45, rcp85")
+    crop: str | None = Field(None, description="Crop: WHEAT or MAIZE (for CCA-03)")
+    years: int | None = Field(None, description="Simulation years")
+    farmers: int | None = Field(None, description="Number of farmer agents")
+    pv_developers: int | None = Field(None, description="Number of PV developer agents (for CCA-04)")
+    # Multi-level ABM parameters
+    collectives: int | None = Field(None, description="Number of farmer collectives (Community Level)")
+    markets: int | None = Field(None, description="Number of commodity markets (Market Level)")
+    policymakers: int | None = Field(None, description="Number of policymaker agents (Policy Level)")
+    # Spatial filtering
+    geojson_file: str | None = Field(None, description="Path to GeoJSON file for polygon-based spatial filtering")
+    # User-specified farmer locations (NEW - 2025-10-21)
+    farmer_locations: list[dict] | None = Field(None, description="List of farmer locations with initial crops. Extract from patterns like 'wheat at (40.5, 22.7)', 'maize at 40.6, 22.8'. Each dict should have: {lat: float, lon: float, crop: str}. IMPORTANT: crop must be WHEAT or MAIZE (the current farmland crop), NOT 'PV' or 'solar'. For PV evaluation queries (CCA-04), use 'WHEAT' as default crop since we're evaluating existing farmland for PV conversion.")
+
+
+# Output Schema
+class CCAQueryOutput(BaseIOSchema):
+    """Output from CCA simulation"""
+    user_story: str = Field(..., description="Identified user story (e.g., CCA-03)")
+    result: str = Field(..., description="Simulation results")
+    output_files: list[str] = Field(default=[], description="Generated files")
+    status: str = Field(..., description="success or error")
+
+
+# Tool Config
+class CCAToolConfig(BaseToolConfig):
+    """CCA Tool configuration"""
+    cca_path: str = Field(
+        default="/app/use_cases/cca",
+        description="Path to CCA directory"
+    )
+
+
+# Tool Implementation
+class CCATool(BaseTool[CCAQueryInput, CCAQueryOutput]):
+    """
+    Executes Climate Change Adaptation (CCA) simulations.
+
+    Handles user stories:
+    - CCA-03: Simulate Crop Yield Under Climate Change
+    - CCA-04: Evaluate Land Suitability for PV Installations
+    - CCA-10: Simulate Cross-Scale Interactions
+    """
+
+    input_schema = CCAQueryInput
+    output_schema = CCAQueryOutput
+
+    def __init__(self, config: CCAToolConfig = CCAToolConfig()):
+        super().__init__(config)
+        self.cca_path = Path(config.cca_path)
+
+    def run(self, params: CCAQueryInput) -> CCAQueryOutput:
+        """Execute CCA simulation"""
+        # Normalize scenario name (optimistic/moderate/pessimistic → rcp26/45/85)
+        if params.scenario:
+            try:
+                params.scenario = normalize_scenario(params.scenario, use_case="cca")
+            except ValueError as e:
+                return CCAQueryOutput(
+                    user_story="ERROR",
+                    result=f"❌ Invalid scenario: {e}",
+                    output_files=[],
+                    status="error"
+                )
+
+        # ALWAYS check keywords first for CCA-10 (policy/cross-scale) - LLM often gets this wrong
+        keyword_story = self._identify_user_story(params.query)
+
+        # Use LLM-provided user story if available, but OVERRIDE with keywords for CCA-10
+        if params.user_story:
+            user_story = params.user_story
+            print(f"📌 LLM identified: {user_story}", file=sys.stderr)
+
+            # OVERRIDE: If keywords say CCA-10, trust keywords over LLM
+            if keyword_story == "CCA-10":
+                print(f"⚠️  OVERRIDE: Keyword match says CCA-10 (cross-scale/policy interactions) - using that instead!", file=sys.stderr)
+                user_story = "CCA-10"
+        else:
+            user_story = keyword_story
+            print(f"📌 Using keyword-matched user story: {user_story}", file=sys.stderr)
+
+        try:
+            if user_story == "CCA-03":
+                return self._run_cca_03(params)
+            elif user_story == "CCA-04":
+                return self._run_cca_04(params)
+            elif user_story == "CCA-10":
+                return self._run_cca_10(params)
+            else:
+                return CCAQueryOutput(
+                    user_story="UNKNOWN",
+                    result=f"Could not identify user story from: {params.query}",
+                    output_files=[],
+                    status="error"
+                )
+        except Exception as e:
+            return CCAQueryOutput(
+                user_story=user_story,
+                result=f"Error: {str(e)}",
+                output_files=[],
+                status="error"
+            )
+
+    def _identify_user_story(self, query: str) -> str:
+        """Map query to user story - PRIORITY ORDER"""
+        q = query.lower()
+
+        # EXPLICIT TASK KEYWORDS (highest priority - what the user wants to analyze)
+        has_crop_yield = any(phrase in q for phrase in [
+            "crop yield", "wheat yield", "maize yield", "yield"
+        ])
+        has_pv_suitability = any(phrase in q for phrase in [
+            "pv suitability", "pv installation", "evaluate pv", "pv adoption",
+            "land suitability for pv"
+        ])
+        has_cross_scale_focus = any(phrase in q for phrase in [
+            "cross-scale", "cross scale", "multi-level", "multi level",
+            "feedback loop", "interaction",
+            "individual to policy", "farmer to policy", "farmer decisions affect",
+            "policy impact", "policy effect", "analyze policy", "policy influence"
+        ])
+
+        # INFRASTRUCTURE KEYWORDS (lower priority - just simulation parameters)
+        has_multi_level_params = any(phrase in q for phrase in [
+            "cooperative", "collective", "market", "policymaker"
+        ])
+
+        # Priority 1: Explicit crop yield query → CCA-03 (even with multi-level params)
+        if has_crop_yield:
+            return "CCA-03"
+
+        # Priority 2: Cross-scale interactions as PRIMARY focus → CCA-10
+        if has_cross_scale_focus:
+            return "CCA-10"
+
+        # Priority 3: PV suitability → CCA-04
+        if has_pv_suitability or any(phrase in q for phrase in ["pv", "solar", "photovoltaic", "renewable energy", "energy company"]):
+            return "CCA-04"
+
+        # Priority 4: Multi-level parameters WITHOUT explicit task → likely CCA-10
+        if has_multi_level_params:
+            return "CCA-10"
+
+        # Priority 5: Climate adaptation keywords → CCA-03
+        if any(phrase in q for phrase in [
+            "climate change", "climate adaptation", "adaptation",
+            "farming", "irrigation", "drought", "resilience"
+        ]):
+            return "CCA-03"
+
+        # Default: CCA-03 (crop yield is most common)
+        return "CCA-03"
+
+    def _run_cca_03(self, params: CCAQueryInput) -> CCAQueryOutput:
+        """CCA-03: Crop Yield Under Climate Change"""
+        # CCA-03 can run without scenario (runs ALL scenarios for comparison)
+        # This matches acceptance criteria: "see how yields vary under different climate scenarios"
+
+        # VALIDATION: Require spatial filter (geojson OR farmer_locations)
+        if not params.geojson_file and not params.farmer_locations:
+            return CCAQueryOutput(
+                user_story="CCA-03",
+                result=(
+                    "❌ ERROR: No spatial filter provided!\n\n"
+                    "📍 TRANSITION requires a spatial filter to run simulations.\n\n"
+                    "Please either:\n"
+                    "  1. Draw a polygon on the map (click 'Draw Polygon for Spatial Filtering')\n"
+                    "  2. OR specify exact coordinates in your query (e.g., 'wheat at (40.5, 22.7)')\n\n"
+                    "Without a spatial filter, the simulation cannot determine which geographic area to analyze."
+                ),
+                output_files=[],
+                status="error"
+            )
+
+        # FALLBACK: Extract coordinates with regex if LLM failed
+        # For CCA-03, try to detect crop from query (WHEAT/MAIZE), default to WHEAT
+        if not params.farmer_locations:
+            import re
+            if re.search(r'\(\d+\.?\d*,\s*\d+\.?\d*\)', params.query):
+                print(f"⚠️  LLM failed to extract coordinates - using regex fallback", file=sys.stderr)
+                # Detect crop from query (if specified)
+                default_crop = params.crop if params.crop else "WHEAT"
+                params.farmer_locations = self._extract_coordinates_regex(params.query, default_crop=default_crop)
+                if params.farmer_locations:
+                    print(f"✅ Regex extracted {len(params.farmer_locations)} coordinates (defaulting to {default_crop})", file=sys.stderr)
+
+        # Validate coordinates against data bounds
+        if params.farmer_locations:
+            error_output = self._validate_coordinates(params.farmer_locations, "CCA-03")
+            if error_output:
+                return error_output
+
+        # DEBUG: Log extracted parameters
+        print(f"🔍 DEBUG CCA-03 extracted params:", file=sys.stderr)
+        print(f"   crop={params.crop}", file=sys.stderr)
+        print(f"   scenario={params.scenario}", file=sys.stderr)
+        print(f"   years={params.years}", file=sys.stderr)
+        print(f"   farmers={params.farmers}", file=sys.stderr)
+        print(f"   collectives={params.collectives}", file=sys.stderr)
+        print(f"   markets={params.markets}", file=sys.stderr)
+        print(f"   policymakers={params.policymakers}", file=sys.stderr)
+
+        cmd = ["python3", str(self.cca_path / "run_cca.py"), "--query", "cca_03"]
+
+        # Track defaults used (for user notification)
+        defaults_used = []
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        # else: Will run ALL scenarios (rcp26, rcp45, rcp85)
+
+        if params.crop:
+            cmd.extend(["--crop", params.crop])
+        else:
+            defaults_used.append("crop=ALL (showing WHEAT + MAIZE)")
+
+        if params.years:
+            cmd.extend(["--years", str(params.years)])
+        else:
+            defaults_used.append("years=10")
+
+        if params.farmers:
+            cmd.extend(["--farmers", str(params.farmers)])
+        elif not params.farmer_locations:
+            # Only show "farmers=3" default if NO coordinates provided
+            defaults_used.append("farmers=3")
+
+        # Multi-level ABM parameters - track if defaults are used
+        if params.collectives is not None:
+            cmd.extend(["--collectives", str(params.collectives)])
+        else:
+            defaults_used.append("collectives=2")
+
+        if params.markets is not None:
+            cmd.extend(["--markets", str(params.markets)])
+        else:
+            defaults_used.append("markets=1")
+
+        if params.policymakers is not None:
+            cmd.extend(["--policies", str(params.policymakers)])
+        else:
+            defaults_used.append("policymakers=1")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Add user-specified farmer locations if provided (NEW - 2025-10-21)
+        if params.farmer_locations:
+            import json
+            locations_json = json.dumps(params.farmer_locations)
+            cmd.extend(["--farmer-locations", locations_json])
+            print(f"📍 Using {len(params.farmer_locations)} user-specified locations", file=sys.stderr)
+
+            # If user specified locations, ignore --farmers parameter
+            if params.farmers:
+                print(f"⚠️  WARNING: Ignoring --farmers={params.farmers} (using user-specified locations instead)", file=sys.stderr)
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.cca_path, timeout=300)
+
+        # Collect output files
+        output_files = []
+        output_dir = self.cca_path / "results" / "cca_03"
+        if output_dir.exists():
+            output_files.extend([str(f) for f in output_dir.glob("*.txt")])
+            output_files.extend([str(f) for f in output_dir.glob("*.html")])
+            output_files.extend([str(f) for f in output_dir.glob("*.csv")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return CCAQueryOutput(
+            user_story="CCA-03",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_cca_04(self, params: CCAQueryInput) -> CCAQueryOutput:
+        """CCA-04: PV Installation Suitability"""
+        # CCA-04 can run without scenario (runs ALL scenarios for comparison)
+        # This matches acceptance criteria: "based on current and future climate conditions"
+
+        # VALIDATION: Require spatial filter (geojson OR farmer_locations)
+        if not params.geojson_file and not params.farmer_locations:
+            return CCAQueryOutput(
+                user_story="CCA-04",
+                result=(
+                    "❌ ERROR: No spatial filter provided!\n\n"
+                    "📍 TRANSITION requires a spatial filter to run simulations.\n\n"
+                    "Please either:\n"
+                    "  1. Draw a polygon on the map (click 'Draw Polygon for Spatial Filtering')\n"
+                    "  2. OR specify exact coordinates in your query (e.g., 'evaluate PV at (40.5, 22.7)')\n\n"
+                    "Without a spatial filter, the simulation cannot determine which geographic area to analyze."
+                ),
+                output_files=[],
+                status="error"
+            )
+
+        # FALLBACK: Extract coordinates with regex if LLM failed
+        # For CCA-04, default crop is WHEAT (evaluating farmland for PV conversion)
+        if not params.farmer_locations:
+            import re
+            if re.search(r'\(\d+\.?\d*,\s*\d+\.?\d*\)', params.query):
+                print(f"⚠️  LLM failed to extract coordinates - using regex fallback", file=sys.stderr)
+                params.farmer_locations = self._extract_coordinates_regex(params.query, default_crop="WHEAT")
+                if params.farmer_locations:
+                    print(f"✅ Regex extracted {len(params.farmer_locations)} coordinates (defaulting to WHEAT for farmland evaluation)", file=sys.stderr)
+
+        # Validate coordinates against data bounds
+        if params.farmer_locations:
+            error_output = self._validate_coordinates(params.farmer_locations, "CCA-04")
+            if error_output:
+                return error_output
+
+        # FIX: If LLM incorrectly set crop to "PV" or "solar", correct it to "WHEAT"
+        # CCA-04 evaluates existing farmland (WHEAT/MAIZE) for PV conversion
+        if params.farmer_locations:
+            for loc in params.farmer_locations:
+                if loc.get('crop', '').upper() in ['PV', 'SOLAR', 'PHOTOVOLTAIC']:
+                    print(f"⚠️  Correcting invalid crop '{loc['crop']}' to 'WHEAT' (CCA-04 evaluates farmland)", file=sys.stderr)
+                    loc['crop'] = 'WHEAT'
+
+        cmd = ["python3", str(self.cca_path / "run_cca.py"), "--query", "cca_04"]
+
+        # Track defaults used (for user notification)
+        defaults_used = []
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+
+        if params.farmers:
+            cmd.extend(["--farmers", str(params.farmers)])
+        elif not params.farmer_locations:
+            # Only show "farmers=3" default if NO coordinates provided
+            # (if coordinates provided, farmer count = number of coordinates, not a default)
+            defaults_used.append("farmers=3")
+
+        # CRITICAL: CCA-04 REQUIRES PV developers (it's about PV suitability evaluation!)
+        if params.pv_developers:
+            cmd.extend(["--pv-developers", str(params.pv_developers)])
+        else:
+            # Default: 2 energy companies if not specified (CCA-04 can't run without PV developers!)
+            cmd.extend(["--pv-developers", "2"])
+            defaults_used.append("pv_developers=2 (default - CCA-04 requires energy companies)")
+
+        if params.years:
+            cmd.extend(["--years", str(params.years)])
+        else:
+            defaults_used.append("years=10")
+
+        # Multi-level ABM parameters
+        # CCA-04 uses ONLY: PVDeveloperAgent + PolicymakerAgent (for green credits)
+        # Collectives and commodity markets are NOT used in PV suitability logic
+        if params.collectives is not None:
+            cmd.extend(["--collectives", str(params.collectives)])
+        else:
+            # Default: 0 collectives (not used in CCA-04)
+            cmd.extend(["--collectives", "0"])
+
+        if params.markets is not None:
+            cmd.extend(["--markets", str(params.markets)])
+        else:
+            # Default: 0 markets (not used in CCA-04)
+            cmd.extend(["--markets", "0"])
+
+        if params.policymakers is not None:
+            cmd.extend(["--policies", str(params.policymakers)])
+        else:
+            # Default: 1 policymaker (provides green credit rates)
+            cmd.extend(["--policies", "1"])
+            defaults_used.append("policymakers=1")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Add user-specified farmer locations if provided (NEW - 2025-10-21)
+        if params.farmer_locations:
+            import json
+            locations_json = json.dumps(params.farmer_locations)
+            cmd.extend(["--farmer-locations", locations_json])
+            print(f"📍 Using {len(params.farmer_locations)} user-specified locations", file=sys.stderr)
+
+            if params.farmers:
+                print(f"⚠️  WARNING: Ignoring --farmers={params.farmers} (using user-specified locations instead)", file=sys.stderr)
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.cca_path, timeout=300)
+
+        # Collect output files
+        output_files = []
+        output_dir = self.cca_path / "results" / "cca_04"
+        if output_dir.exists():
+            output_files.extend([str(f) for f in output_dir.glob("*.txt")])
+            output_files.extend([str(f) for f in output_dir.glob("*.html")])
+            output_files.extend([str(f) for f in output_dir.glob("*.csv")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return CCAQueryOutput(
+            user_story="CCA-04",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_cca_10(self, params: CCAQueryInput) -> CCAQueryOutput:
+        """CCA-10: Cross-Scale Interactions"""
+        # Validate required parameters
+        if not params.scenario:
+            return CCAQueryOutput(
+                user_story="CCA-10",
+                result="❌ ERROR: CCA-10 requires --scenario parameter (optimistic, moderate, or pessimistic)\n❌ Cross-scale interactions need climate context. Please specify: optimistic, moderate, or pessimistic\n❌ Example: Run cross-scale interactions with 20 farmers under moderate scenario",
+                output_files=[],
+                status="error"
+            )
+
+        # VALIDATION: Require spatial filter (geojson OR farmer_locations)
+        if not params.geojson_file and not params.farmer_locations:
+            return CCAQueryOutput(
+                user_story="CCA-10",
+                result=(
+                    "❌ ERROR: No spatial filter provided!\n\n"
+                    "📍 TRANSITION requires a spatial filter to run simulations.\n\n"
+                    "Please either:\n"
+                    "  1. Draw a polygon on the map (click 'Draw Polygon for Spatial Filtering')\n"
+                    "  2. OR specify exact coordinates in your query (e.g., 'wheat at (40.5, 22.7)')\n\n"
+                    "Without a spatial filter, the simulation cannot determine which geographic area to analyze."
+                ),
+                output_files=[],
+                status="error"
+            )
+
+        # FALLBACK: Extract coordinates with regex if LLM failed
+        # For CCA-10, try to detect crop from query (WHEAT/MAIZE), default to WHEAT
+        if not params.farmer_locations:
+            import re
+            if re.search(r'\(\d+\.?\d*,\s*\d+\.?\d*\)', params.query):
+                print(f"⚠️  LLM failed to extract coordinates - using regex fallback", file=sys.stderr)
+                # Detect crop from query (if specified)
+                default_crop = params.crop if params.crop else "WHEAT"
+                params.farmer_locations = self._extract_coordinates_regex(params.query, default_crop=default_crop)
+                if params.farmer_locations:
+                    print(f"✅ Regex extracted {len(params.farmer_locations)} coordinates (defaulting to {default_crop})", file=sys.stderr)
+
+        # Validate coordinates against data bounds
+        if params.farmer_locations:
+            error_output = self._validate_coordinates(params.farmer_locations, "CCA-10")
+            if error_output:
+                return error_output
+
+        # FIX: Ensure all farmer_locations have valid crop (not None)
+        if params.farmer_locations:
+            for loc in params.farmer_locations:
+                if not loc.get('crop') or loc.get('crop') is None:
+                    print(f"⚠️  Missing crop for coordinate ({loc['lat']}, {loc['lon']}) - defaulting to WHEAT", file=sys.stderr)
+                    loc['crop'] = 'WHEAT'
+
+        cmd = ["python3", str(self.cca_path / "run_cca.py"), "--query", "cca_10"]
+
+        # Track defaults used (for user notification)
+        defaults_used = []
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+
+        if params.years:
+            cmd.extend(["--years", str(params.years)])
+        else:
+            defaults_used.append("years=10")
+
+        if params.farmers:
+            cmd.extend(["--farmers", str(params.farmers)])
+        elif not params.farmer_locations:
+            # Only show "farmers=3" default if NO coordinates provided
+            defaults_used.append("farmers=3")
+
+        if params.pv_developers:
+            cmd.extend(["--pv-developers", str(params.pv_developers)])
+
+        # Add multi-level ABM parameters (CORE to CCA-10 - show defaults notification)
+        # CCA-10 is specifically about cross-scale interactions, so users need to know the configuration
+        if params.collectives is not None:
+            cmd.extend(["--collectives", str(params.collectives)])
+        else:
+            defaults_used.append("collectives=2")
+
+        if params.markets is not None:
+            cmd.extend(["--markets", str(params.markets)])
+        else:
+            defaults_used.append("markets=1")
+
+        if params.policymakers is not None:
+            cmd.extend(["--policies", str(params.policymakers)])
+        else:
+            defaults_used.append("policymakers=1")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Add user-specified farmer locations if provided (NEW - 2025-10-21)
+        if params.farmer_locations:
+            import json
+            locations_json = json.dumps(params.farmer_locations)
+            cmd.extend(["--farmer-locations", locations_json])
+            print(f"📍 Using {len(params.farmer_locations)} user-specified locations", file=sys.stderr)
+
+            if params.farmers:
+                print(f"⚠️  WARNING: Ignoring --farmers={params.farmers} (using user-specified locations instead)", file=sys.stderr)
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.cca_path, timeout=300)
+
+        # Collect output files
+        output_files = []
+        output_dir = self.cca_path / "results" / "cca_10"
+        if output_dir.exists():
+            output_files.extend([str(f) for f in output_dir.glob("*.txt")])
+            output_files.extend([str(f) for f in output_dir.glob("*.html")])
+            output_files.extend([str(f) for f in output_dir.glob("*.csv")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return CCAQueryOutput(
+            user_story="CCA-10",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _extract_coordinates_regex(self, query: str, default_crop: str = "WHEAT") -> list[dict] | None:
+        """
+        Fallback coordinate extractor using regex.
+        Extracts all (lat, lon) pairs from query.
+
+        Args:
+            query: User query string
+            default_crop: Default crop to assign (WHEAT for CCA-04, varies for CCA-03)
+
+        Returns:
+            List of location dicts with lat, lon, crop
+        """
+        import re
+
+        # Pattern: (number, number) where numbers can be floats
+        # Use groups to extract lat and lon separately
+        pattern = r'\((\d+\.?\d*),\s*(\d+\.?\d*)\)'
+        matches = re.findall(pattern, query)
+
+        if not matches:
+            return None
+
+        locations = []
+        for lat_str, lon_str in matches:
+            locations.append({
+                'lat': float(lat_str),
+                'lon': float(lon_str),
+                'crop': default_crop  # Default crop (WHEAT for PV evaluation, varies for crop yield)
+            })
+
+        return locations
+
+    def _validate_coordinates(self, farmer_locations: list[dict], user_story: str) -> CCAQueryOutput | None:
+        """
+        Validate farmer coordinates against data bounds.
+        Returns error output if invalid, None if valid.
+        """
+        LAT_MIN, LAT_MAX = 40.4, 40.9
+        LON_MIN, LON_MAX = 22.5, 22.9
+
+        location_errors = []
+        for i, loc in enumerate(farmer_locations, 1):
+            lat, lon = loc['lat'], loc['lon']
+            coord_errors = []
+
+            if not (LAT_MIN <= lat <= LAT_MAX):
+                coord_errors.append(f"latitude {lat}° outside range [{LAT_MIN:.4f}°, {LAT_MAX:.4f}°]")
+            if not (LON_MIN <= lon <= LON_MAX):
+                coord_errors.append(f"longitude {lon}° outside range [{LON_MIN:.4f}°, {LON_MAX:.4f}°]")
+
+            if coord_errors:
+                location_errors.append(f"Location {i}: {'; '.join(coord_errors)}")
+
+        if location_errors:
+            error_msg = f"❌ COORDINATE VALIDATION FAILED! {' | '.join(location_errors)} | ⚠️ Coordinates must be within valid data bounds!"
+            print("\n" + error_msg, file=sys.stderr)
+            return CCAQueryOutput(
+                user_story=user_story,
+                result=error_msg,
+                output_files=[],
+                status="error"
+            )
+        return None
+
+
+# ==================== Tool Definition ====================
+
+def get_cca_tool():
+    """Get configured CCA tool instance"""
+    return CCATool()

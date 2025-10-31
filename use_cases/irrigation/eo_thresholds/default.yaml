@@ -1,0 +1,110 @@
+# EO Classification Thresholds
+# Default values - applicable to most European agricultural regions
+
+# ==============================================================================
+# BARE SOIL DETECTION (using NDVI)
+# ==============================================================================
+bare_soil_detection:
+  # NDVI threshold: values below this are considered bare soil (no vegetation)
+  # Typical ranges:
+  #   - NDVI < 0.2: Bare soil, urban, water
+  #   - NDVI 0.2-0.4: Sparse vegetation, grassland
+  #   - NDVI 0.4-0.6: Moderate vegetation, crops
+  #   - NDVI > 0.6: Dense vegetation, forests
+  ndvi_threshold: 0.25
+
+  # Confidence level: what percentage of pixels must be below threshold
+  # to classify the entire parcel as bare soil
+  confidence_level: 0.8  # 80% of pixels must be bare
+
+  # Minimum parcel size (hectares) for classification
+  min_parcel_size_ha: 0.5
+
+  # Temporal consistency: require bare soil detection in N consecutive observations
+  # This reduces false positives from temporary bare patches (e.g., roads crossing fields)
+  temporal_consistency_days: 10  # Check 10-day composite
+
+# ==============================================================================
+# RICE FLOOD DETECTION (using NDWI - Normalized Difference Water Index)
+# ==============================================================================
+rice_flood_detection:
+  # NDWI threshold: values above this indicate standing water
+  # NDWI = (Green - NIR) / (Green + NIR)
+  # Typical ranges:
+  #   - NDWI > 0.3: Open water (lakes, rivers, flooded rice)
+  #   - NDWI 0.0-0.3: Wet soil, irrigated crops
+  #   - NDWI < 0.0: Dry soil, vegetation
+  ndwi_threshold: 0.2
+
+  # Monitoring window: which months to check for flooding
+  # This is loaded from crop_calendar.yaml (flooding_months for RICE)
+  # Default fallback if crop calendar doesn't specify
+  default_monitoring_months: [5, 6]  # May-June (peak rice flooding period in Mediterranean)
+
+  # Minimum flooded area percentage: what percentage of parcel must show water
+  # to confirm it is actually flooded (not just irrigation canals or puddles)
+  min_flooded_area_pct: 60  # At least 60% of parcel must be flooded
+
+  # Temporal persistence: flooding must be detected in at least N observations
+  # to distinguish from temporary rainfall flooding
+  min_observations: 2  # At least 2 Sentinel-2 passes (10-day interval)
+
+  # If flooding is NOT detected for a parcel assigned to RICE:
+  # Action: Reassign to alternate crop or mark as fallow
+  no_flood_action: "reassign_or_fallow"
+  alternate_crops: ["MAIZE", "COTTON"]  # Fallback crops if rice flooding fails
+
+# ==============================================================================
+# CROP CLASSIFICATION (using NDVI + temporal signatures)
+# ==============================================================================
+crop_classification:
+  # Minimum NDVI values for healthy crop growth (by crop type)
+  # Used to validate that assigned crop is actually growing
+  min_ndvi_healthy:
+    RICE: 0.4         # Rice during vegetative phase
+    MAIZE: 0.5        # Maize during peak growth
+    WINTER_WHEAT: 0.4 # Wheat during tillering/heading
+    COTTON: 0.3       # Cotton (lower NDVI due to sparse canopy)
+    SUGAR_BEET: 0.5   # Sugar beet
+    SUNFLOWER: 0.4    # Sunflower
+
+  # Peak growth period (when to check NDVI for crop validation)
+  # Day of year ranges
+  peak_growth_windows:
+    RICE: [180, 210]         # Late June - Late July
+    MAIZE: [180, 210]        # Late June - Late July
+    WINTER_WHEAT: [120, 150] # Late April - Late May
+    COTTON: [180, 210]       # Late June - Late July
+    SUGAR_BEET: [150, 180]   # Late May - Late June
+    SUNFLOWER: [150, 180]    # Late May - Late June
+
+# ==============================================================================
+# QUALITY CONTROL
+# ==============================================================================
+quality_control:
+  # Maximum cloud cover percentage for scene acceptance
+  max_cloud_cover_pct: 30
+
+  # Minimum number of clear observations per season for reliable classification
+  min_observations_per_season: 3
+
+  # Edge buffer (meters): ignore pixels within this distance from parcel boundary
+  # to reduce classification errors from mixed pixels
+  edge_buffer_m: 10
+
+# ==============================================================================
+# REGIONAL CALIBRATION NOTES
+# ==============================================================================
+# These thresholds work well for most European agricultural regions, but may need
+# calibration for:
+# - High-altitude regions (Alpine): NDVI thresholds may be 0.05-0.1 lower due to
+#   cooler temperatures and shorter growing seasons
+# - Northern Europe (Scandinavia): Later phenological stages, adjust peak growth
+#   windows by +15-30 days
+# - Arid regions (Southern Spain, Sicily): Lower NDVI thresholds for water-stressed crops
+#
+# To calibrate for your region:
+# 1. Collect ground truth data (field visits or farmer surveys)
+# 2. Extract NDVI/NDWI time series for known crop types
+# 3. Adjust thresholds to maximize classification accuracy (target: >85%)
+# 4. Create a new YAML file: eo_thresholds/<your_region>.yaml

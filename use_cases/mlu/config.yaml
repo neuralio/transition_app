@@ -1,0 +1,193 @@
+# TRANSITION MLU Use Case Configuration
+# Multi-Land Use (MLU): Agricultural vs Solar PV Land Use Decision Modeling
+
+# Data paths
+data:
+  # Path to PILOT_THESSALONIKI_DATA directory
+  # Contains: meteo/, crops/, soil/, terrain/ subdirectories
+  base_path: "/app/data"
+
+  # Alternative: Use relative path from project root
+  # base_path: "../data/PILOT_THESSALONIKI_DATA"
+
+  # Data subdirectories
+  subdirs:
+    meteo: "meteo"
+    soil: "soil"
+    dem: "DEM"
+    yield: "yield"
+    historical: "Historical"
+    crops:
+      wheat: "WHEAT"
+      maize: "MAIZE"
+
+  # Data filenames
+  files:
+    # Future meteorological data (RCP scenarios)
+    temperature: "tas_{scenario}.nc"  # {scenario} = rcp26/rcp45/rcp85
+    precipitation: "pr_{scenario}.nc"
+    solar_radiation: "rsds_{scenario}.nc"
+    evapotranspiration: "evptsp_{scenario}.nc"
+
+    # Historical meteorological data (ERA5 reanalysis)
+    historical_temperature: "ERA5_LAND_TMP_MEAN.nc"
+    historical_precipitation: "ERA5_LAND_RAIN.nc"
+    historical_solar_radiation: "ERA5_LAND_SOLAR.nc"
+    historical_evapotranspiration: "ERA5_LAND_EVPT.nc"
+
+    # Crop suitability data
+    lusa_predictions: "LUSA_PREDICTIONS_{scenario}.nc"  # {scenario} = RCP26/RCP45/RCP85
+    lusa_historical: "PAST_LUSA_PREDICTIONS.nc"
+
+    # Yield data (AquaCrop)
+    yield_rcp26: "AquaCrop_Results_RCP26_PILOT_THESSALONIKI.csv"
+    yield_rcp45: "AquaCrop_Results_RCP45_PILOT_THESSALONIKI.csv"
+    yield_rcp85: "AquaCrop_Results_RCP85_PILOT_THESSALONIKI.csv"
+    yield_historical: "AquaCrop_Results_PAST.csv"
+
+    # Soil data
+    soil_type: "soil_type.nc"
+    soil_cec: "cec.nc"
+    soil_ph: "ph.nc"
+    soil_organic_carbon: "organic_carbon.nc"
+
+    # Terrain data
+    dem: "dem.nc"
+
+# Simulation parameters
+simulation:
+  # Default number of land parcels (each decides: farm OR solar)
+  n_parcels: 15
+
+  # Simulation duration in years
+  n_years: 10
+
+  # Climate scenarios (user-friendly names mapped to RCP identifiers)
+  # Users can specify: optimistic, moderate, pessimistic
+  # System internally maps to: rcp26, rcp45, rcp85
+  scenario_mapping:
+    optimistic: rcp26  # Low Warming (~2°C) - Ambitious mitigation
+    moderate: rcp45    # Medium Warming (~3°C) - Moderate mitigation
+    pessimistic: rcp85 # High Warming (~4-5°C) - High emissions
+
+  # Default scenarios to run (internal RCP codes)
+  scenarios:
+    - rcp26
+    - rcp45
+    - rcp85
+
+  # Scenario descriptions for visualizations
+  scenario_descriptions:
+    rcp26: "Optimistic (Low Warming ~2°C)"
+    rcp45: "Moderate (Medium Warming ~3°C)"
+    rcp85: "Pessimistic (High Warming ~4-5°C)"
+
+  # Monte Carlo ensemble runs for probabilistic uncertainty
+  # Number of stochastic realizations per scenario
+  # Set to 1 for single run (faster)
+  # Set to 30-50 for ensemble mode (probabilistic uncertainty, slower)
+  # Use --ensemble flag to force enable, --no-ensemble to force disable
+  ensemble_size: 30
+
+  # Confidence level for uncertainty bands (0.0-1.0)
+  confidence_level: 0.95  # 95% confidence intervals
+
+# Region boundaries (Thessaloniki)
+# EXACT coordinates from meteorological NetCDF files (evptsp_rcp85.nc)
+# Source: /home/ggous/Downloads/PILOT_THESSALONIKI_DATA/meteo/evptsp_rcp85.nc
+region:
+  name: "Thessaloniki, Greece"
+
+  # Exact bounds (ALL meteorological files use these)
+  lat_min: 40.4
+  lat_max: 40.9
+  lon_min: 22.5
+  lon_max: 22.9
+
+  # IMPORTANT: Latitude coordinate order
+  # - Meteorological files (tas, pr, rsds, evptsp): lat is DESCENDING [40.9, 40.8, 40.7, 40.6, 40.5, 40.4]
+  # - LUSA files: lat is ASCENDING [34.0, 34.1, ..., 42.9, 43.0]
+  # When using xarray.sel(lat=slice(...)):
+  #   - For meteorological files: use slice(lat_max, lat_min)  # REVERSED
+  #   - For LUSA files: use slice(lat_min, lat_max)  # NORMAL
+  lat_descending: true  # True for meteorological files, False for LUSA files
+
+  # Actual coordinate values in meteorological files
+  lat_values: [40.9, 40.8, 40.7, 40.6, 40.5, 40.4]  # 6 points
+  lon_values: [22.5, 22.6, 22.7, 22.8, 22.9]  # 5 points
+
+# Crops to model
+crops:
+  - WHEAT
+  - MAIZE
+
+# Output settings
+output:
+  # Results directory (relative to use_cases/mlu/)
+  results_dir: "results"
+
+  # Enable GIS visualization
+  enable_gis_maps: true
+
+  # Enable trade-off analysis charts
+  enable_charts: true
+
+# Solar PV parameters
+solar_pv:
+  # Default PV capacity per parcel (kW)
+  capacity_kw: 100.0
+
+  # Panel efficiency (0-1)
+  efficiency: 0.18
+
+  # Annual degradation rate
+  degradation_rate: 0.005
+
+  # Installation cost (€/kW)
+  installation_cost_per_kw: 1000.0
+
+  # Annual maintenance cost (€/year)
+  maintenance_cost_annual: 500.0
+
+  # Electricity price (€/kWh)
+  electricity_price: 0.15
+
+  # Government subsidy rate (0-1)
+  subsidy_rate: 0.20
+
+  # Grid connection cost (€/km)
+  grid_connection_cost_per_km: 30000.0
+
+  # Road access cost (€/km)
+  road_access_cost_per_km: 5000.0
+
+  # Grid connection fee (€, one-time)
+  grid_connection_fee: 5000.0
+
+  # Annual grid access fee (€/year)
+  annual_grid_fee: 500.0
+
+# Agriculture parameters
+agriculture:
+  # Default parcel size (hectares)
+  land_hectares: 10.0
+
+  # Crop prices (€/ton)
+  crop_prices:
+    WHEAT: 200.0
+    MAIZE: 180.0
+
+# Multi-level ABM settings (DEFAULT: ENABLED)
+multilevel:
+  # Enable multi-level ABM (Individual, Community, Market, Policy)
+  # TRUE by default - provides full 4-level ML-ABM workflow
+  enabled: true
+
+  # Number of farmer collectives (community level)
+  n_collectives: 2
+
+  # Number of commodity markets (market level)
+  n_markets: 1
+
+  # Number of policymakers (policy level)
+  n_policymakers: 1

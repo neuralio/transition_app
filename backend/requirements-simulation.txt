@@ -1,0 +1,48 @@
+# TRANSITION Platform - ML-ABM & Simulation Dependencies
+# Developer 1: Mesa ABM, RL, EO Data Processing
+# Python 3.11+
+
+# ==================== Core Simulation ====================
+mesa==3.3.0                    # Agent-based modeling framework
+networkx==3.2.1                # Social network graphs
+
+# ==================== Reinforcement Learning ====================
+gymnasium==0.29.1              # RL environment interface (OpenAI Gym successor)
+stable-baselines3==2.2.1       # High-quality RL implementations
+torch==2.1.2                   # PyTorch for neural networks
+torchvision==0.16.2            # Vision utilities
+torchaudio==2.1.2              # Audio utilities
+
+# ==================== Geospatial & EO Data ====================
+rasterio==1.3.9                # Raster data processing (REQUIRED for EO)
+xarray==2023.12.0              # N-dimensional labeled arrays (REQUIRED for NetCDF)
+geopandas==0.14.2              # Vector geospatial operations
+shapely==2.0.2                 # Geometric operations
+pyproj==3.6.1                  # Coordinate transformations
+fiona==1.9.5                   # Vector file I/O
+gdal==3.8.3                    # Geospatial Data Abstraction Library
+
+# ==================== Climate & EO Data Sources ====================
+sentinelsat==1.2.1             # Sentinel satellite data download
+netCDF4==1.6.5                 # Climate data (CMIP6, ERA5)
+h5py==3.10.0                   # HDF5 file format support
+zarr==2.16.1                   # Cloud-optimized array storage
+
+# ==================== Scientific Computing ====================
+numpy==1.26.3                  # Numerical computing
+scipy==1.11.4                  # Scientific computing
+pandas==2.1.4                  # Data manipulation
+scikit-learn==1.4.0            # Machine learning utilities
+
+# ==================== Utilities ====================
+tqdm==4.66.1                   # Progress bars
+pyyaml==6.0.1                  # YAML configuration
+python-dotenv==1.0.0           # Environment variables
+
+# ==================== Development & Testing ====================
+pytest==7.4.4                  # Testing framework
+pytest-asyncio==0.23.3         # Async testing support
+pytest-cov==4.1.0              # Test coverage
+black==23.12.1                 # Code formatting
+ruff==0.1.11                   # Linting
+mypy==1.8.0                    # Type checking

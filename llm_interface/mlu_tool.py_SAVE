@@ -1,0 +1,718 @@
+#!/usr/bin/env python3
+"""
+MLU Tool - Handles Multi-Land Use queries (MLU-01 through MLU-08)
+"""
+import subprocess
+import re
+import sys
+import importlib.util
+from pathlib import Path
+from atomic_agents import BaseTool, BaseToolConfig, BaseIOSchema
+from pydantic import Field
+
+# Import scenario utilities using explicit module loading to avoid import conflicts
+_mlu_scenario_utils_path = Path(__file__).parent.parent / "use_cases" / "mlu" / "utils" / "scenario_utils.py"
+_spec = importlib.util.spec_from_file_location("mlu_scenario_utils_tool", _mlu_scenario_utils_path)
+_mlu_scenario_utils = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mlu_scenario_utils)
+normalize_scenario = _mlu_scenario_utils.normalize_scenario
+
+
+# Input Schema
+class MLUQueryInput(BaseIOSchema):
+    """Input for MLU queries"""
+    query: str = Field(..., description="User's natural language query about land use")
+    user_story: str | None = Field(None, description="User story ID (e.g., MLU-05, MLU-07) - if provided by LLM")
+    scenario: str | None = Field(None, description="Climate scenario: rcp26, rcp45, rcp85, historical")
+    crop: str | None = Field(None, description="Crop: WHEAT or MAIZE")
+    years: int | None = Field(None, description="Simulation years")
+    parcels: int | None = Field(None, description="Number of parcels")
+    ensemble_size: int | None = Field(None, description="Ensemble size for uncertainty quantification")
+    enable_ensemble: bool | None = Field(None, description="Enable/disable ensemble mode")
+    # Multi-level ABM parameters
+    collectives: int | None = Field(None, description="Number of farmer collectives (Community Level)")
+    markets: int | None = Field(None, description="Number of commodity markets (Market Level)")
+    policymakers: int | None = Field(None, description="Number of policymaker agents (Policy Level)")
+    # Spatial filtering
+    geojson_file: str | None = Field(None, description="Path to GeoJSON file for polygon-based spatial filtering")
+    # User-specified farmer locations
+    farmer_locations: list[dict] | None = Field(None, description="List of farmer/parcel locations with initial crops. Extract from patterns like 'wheat at (40.5, 22.7)', 'maize at 40.6, 22.8'. Each dict should have: {lat: float, lon: float, crop: str}. If user specifies coordinates, parse them into this field.")
+
+
+# Output Schema
+class MLUQueryOutput(BaseIOSchema):
+    """Output from MLU simulation"""
+    user_story: str = Field(..., description="Identified user story (e.g., MLU-05)")
+    result: str = Field(..., description="Simulation results")
+    output_files: list[str] = Field(default=[], description="Generated files")
+    status: str = Field(..., description="success or error")
+
+
+# Tool Config
+class MLUToolConfig(BaseToolConfig):
+    """MLU Tool configuration"""
+    mlu_path: str = Field(
+        default="/app/use_cases/mlu",
+        description="Path to MLU directory"
+    )
+
+
+# Tool Implementation
+class MLUTool(BaseTool[MLUQueryInput, MLUQueryOutput]):
+    """
+    Executes Multi-Land Use (MLU) simulations.
+
+    Handles user stories:
+    - MLU-01: Access LUSA data
+    - MLU-04: AI Categorization
+    - MLU-05: Multi-Level ABM Simulation
+    - MLU-07: Historical Benchmarking
+    - MLU-08: Future Scenario Comparison
+    """
+
+    input_schema = MLUQueryInput
+    output_schema = MLUQueryOutput
+
+    def __init__(self, config: MLUToolConfig = MLUToolConfig()):
+        super().__init__(config)
+        self.mlu_path = Path(config.mlu_path)
+
+    def run(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """Execute MLU simulation"""
+        # Normalize scenario name (optimistic/moderate/pessimistic → rcp26/45/85)
+        if params.scenario and params.scenario != 'historical':
+            try:
+                params.scenario = normalize_scenario(params.scenario)
+            except ValueError as e:
+                return MLUQueryOutput(
+                    user_story="ERROR",
+                    result=f"❌ Invalid scenario: {e}",
+                    output_files=[],
+                    status="error"
+                )
+
+        # Use LLM-provided user story if available, otherwise fall back to keyword matching
+        if params.user_story:
+            user_story = params.user_story
+            print(f"📌 Using LLM-identified user story: {user_story}", file=sys.stderr)
+        else:
+            user_story = self._identify_user_story(params.query)
+            print(f"📌 Using keyword-matched user story: {user_story}", file=sys.stderr)
+
+        try:
+            if user_story == "MLU-01":
+                return self._run_mlu_01(params)
+            elif user_story == "MLU-04":
+                return self._run_mlu_04(params)
+            elif user_story == "MLU-05":
+                return self._run_mlu_05(params)
+            elif user_story == "MLU-07":
+                return self._run_mlu_07(params)
+            elif user_story == "MLU-08":
+                return self._run_mlu_08(params)
+            else:
+                return MLUQueryOutput(
+                    user_story="UNKNOWN",
+                    result=f"Could not identify user story from: {params.query}",
+                    output_files=[],
+                    status="error"
+                )
+        except Exception as e:
+            return MLUQueryOutput(
+                user_story=user_story,
+                result=f"Error: {str(e)}",
+                output_files=[],
+                status="error"
+            )
+
+    def _identify_user_story(self, query: str) -> str:
+        """Map query to user story - PRIORITY ORDER matching transition_agent.py"""
+        q = query.lower()
+
+        # Priority 1: Land suitability evolution/changes/comparison → MLU-07 (HIGHEST PRIORITY)
+        if any(phrase in q for phrase in ["suitability evolution", "suitability changes", "suitability change", "land suitability", "historical vs future", "compare historical"]):
+            return "MLU-07"
+
+        # Priority 2: Historical/Benchmark → MLU-07
+        if any(w in q for w in ["historical", "benchmark", "past"]):
+            return "MLU-07"
+
+        # Priority 3: Future climate scenarios (ensemble mode) → MLU-08
+        # NOTE: "evolution" alone without "suitability" context
+        if any(phrase in q for phrase in ["future climate", "climate scenario", "temperature change", "precipitation", "climate evolution"]):
+            return "MLU-08"
+
+        # Priority 4: Categorize → MLU-04
+        if any(w in q for w in ["categorize", "classify"]):
+            return "MLU-04"
+
+        # Priority 5: LUSA data access → MLU-01
+        if any(phrase in q for phrase in ["lusa data", "view data", "access data", "show lusa"]):
+            return "MLU-01"
+
+        # Priority 6: Generic "suitability" → MLU-07 (if not caught by MLU-08)
+        if "suitability" in q:
+            return "MLU-07"
+
+        # Default: ABM simulation → MLU-05
+        return "MLU-05"
+
+    def _run_mlu_01(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """MLU-01: Access LUSA"""
+        # Validate required parameters
+        if not params.crop:
+            return MLUQueryOutput(
+                user_story="MLU-01",
+                result="❌ ERROR: MLU-01 requires --crop parameter (WHEAT or MAIZE)\nPlease specify which crop you want to analyze.",
+                output_files=[],
+                status="error"
+            )
+
+        # Track defaults used
+        defaults_used = []
+
+        cmd = [sys.executable, str(self.mlu_path / "run_mlu.py"), "--query", "mlu_01"]
+
+        if params.crop:
+            cmd.extend(["--crop", params.crop])
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        else:
+            defaults_used.append("scenario=ALL (showing all climate scenarios)")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.mlu_path, timeout=300)
+
+        # Collect all output files
+        output_files = []
+        output_dir = self.mlu_path / "results" / "mlu_01"
+        if output_dir.exists():
+            output_files.extend([str(f) for f in output_dir.glob("*.html")])
+            output_files.extend([str(f) for f in output_dir.glob("*.png")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return MLUQueryOutput(
+            user_story="MLU-01",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_mlu_04(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """MLU-04: AI Categorization - categorizes parcels by comparing ALL crops (WHEAT/MAIZE/SOLAR)"""
+        # FALLBACK: Extract coordinates with regex if LLM failed
+        if not params.farmer_locations:
+            import re
+            if re.search(r'\(\d+\.?\d*,\s*\d+\.?\d*\)', params.query):
+                print(f"⚠️  LLM failed to extract coordinates - using regex fallback", file=sys.stderr)
+                params.farmer_locations = self._extract_coordinates_regex(params.query)
+                if params.farmer_locations:
+                    print(f"✅ Regex extracted {len(params.farmer_locations)} coordinates", file=sys.stderr)
+
+        # Validate coordinates against data bounds (EXACTLY like irrigation)
+        if params.farmer_locations:
+            LAT_MIN, LAT_MAX = 40.4, 40.9
+            LON_MIN, LON_MAX = 22.5, 22.9
+
+            location_errors = []
+            for i, loc in enumerate(params.farmer_locations, 1):
+                lat, lon = loc['lat'], loc['lon']
+                coord_errors = []
+
+                if not (LAT_MIN <= lat <= LAT_MAX):
+                    coord_errors.append(f"latitude {lat}° outside range [{LAT_MIN:.4f}°, {LAT_MAX:.4f}°]")
+                if not (LON_MIN <= lon <= LON_MAX):
+                    coord_errors.append(f"longitude {lon}° outside range [{LON_MIN:.4f}°, {LON_MAX:.4f}°]")
+
+                if coord_errors:
+                    location_errors.append(f"Location {i}: {'; '.join(coord_errors)}")
+
+            if location_errors:
+                # EXACTLY like irrigation/MLU: single line with " | " separators
+                error_msg = f"❌ COORDINATE VALIDATION FAILED! {' | '.join(location_errors)} | ⚠️ Coordinates must be within valid data bounds!"
+                print("\n" + error_msg, file=sys.stderr)
+                return MLUQueryOutput(
+                    user_story="MLU-04",
+                    result=error_msg,
+                    output_files=[],
+                    status="error"
+                )
+
+        # Validate required parameters
+        if not params.parcels and not params.farmer_locations:
+            return MLUQueryOutput(
+                user_story="MLU-04",
+                result="❌ ERROR: MLU-04 requires --parcels parameter\nPlease specify how many parcels to categorize (e.g., 'categorize 15 parcels') or specific coordinates.",
+                output_files=[],
+                status="error"
+            )
+
+        # Track defaults used
+        defaults_used = []
+
+        cmd = [sys.executable, str(self.mlu_path / "run_mlu.py"), "--query", "mlu_04"]
+
+        # NOTE: MLU-04 does NOT use --crop parameter (categorizes ALL crops: WHEAT vs MAIZE vs SOLAR)
+        # The categorization requires comparing all options, so crop parameter is not applicable
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        else:
+            defaults_used.append("scenario=ALL (showing all climate scenarios)")
+
+        # Add user-specified farmer locations (overrides parcels parameter)
+        if params.farmer_locations:
+            import json
+            locations_json = json.dumps(params.farmer_locations)
+            cmd.extend(["--farmer-locations", locations_json])
+            print(f"📍 Using {len(params.farmer_locations)} user-specified locations", file=sys.stderr)
+
+            # Warn if user also provided --parcels (will be overridden)
+            if params.parcels:
+                print(f"⚠️  WARNING: Ignoring --parcels={params.parcels} (using {len(params.farmer_locations)} user-specified locations instead)", file=sys.stderr)
+        elif params.parcels:
+            cmd.extend(["--parcels", str(params.parcels)])
+
+        # Year parameter for MLU-04 (uses --years flag)
+        if params.years:
+            cmd.extend(["--years", str(params.years)])
+        else:
+            defaults_used.append("year=2050")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.mlu_path, timeout=300)
+
+        # Collect output files (check both single scenario and comparison dirs)
+        output_files = []
+        # Check for specific scenario output (with timestamp subdirectories)
+        if params.scenario:
+            # Single scenario mode - collect from latest timestamp in that scenario dir
+            output_dir = self.mlu_path / "results" / f"mlu_04_{params.scenario}"
+            if output_dir.exists():
+                # Find latest timestamp folder
+                timestamp_folders = sorted([d for d in output_dir.iterdir() if d.is_dir()], reverse=True)
+                if timestamp_folders:
+                    latest = timestamp_folders[0]
+                    # Look in visualizations subfolder
+                    viz_dir = latest / "visualizations"
+                    if viz_dir.exists():
+                        output_files.extend([str(f) for f in viz_dir.glob("*.html")])
+                        output_files.extend([str(f) for f in viz_dir.glob("*.png")])
+                    # Also get txt files from timestamp root
+                    output_files.extend([str(f) for f in latest.glob("*.txt")])
+        else:
+            # All scenarios mode - collect from all scenario dirs (latest timestamp in each)
+            for scenario in ['rcp26', 'rcp45', 'rcp85']:
+                scenario_dir = self.mlu_path / "results" / f"mlu_04_{scenario}"
+                if scenario_dir.exists():
+                    timestamp_folders = sorted([d for d in scenario_dir.iterdir() if d.is_dir()], reverse=True)
+                    if timestamp_folders:
+                        latest = timestamp_folders[0]
+                        viz_dir = latest / "visualizations"
+                        if viz_dir.exists():
+                            output_files.extend([str(f) for f in viz_dir.glob("*.html")])
+                            output_files.extend([str(f) for f in viz_dir.glob("*.png")])
+                        output_files.extend([str(f) for f in latest.glob("*.txt")])
+            # Also collect comparison charts
+            comparison_dir = self.mlu_path / "results" / "mlu_04_comparison"
+            if comparison_dir.exists():
+                output_files.extend([str(f) for f in comparison_dir.glob("*.html")])
+                output_files.extend([str(f) for f in comparison_dir.glob("*.png")])
+
+        # Include subprocess output for debugging and transparency
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+
+        # Prepend defaults notification (will be extracted by backend)
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return MLUQueryOutput(
+            user_story="MLU-04",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_mlu_05(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """MLU-05: Multi-Level ABM - simulates ALL crops (WHEAT/MAIZE/SOLAR)
+
+        NOTE: MLU-05 does NOT use --crop parameter. It simulates all crops because
+        agents make dynamic decisions based on prices, suitability, and policies.
+        Users may mention a crop ("simulate wheat"), but we ignore it (like MLU-04).
+        """
+        # FALLBACK: Extract coordinates with regex if LLM failed
+        if not params.farmer_locations:
+            import re
+            if re.search(r'\(\d+\.?\d*,\s*\d+\.?\d*\)', params.query):
+                print(f"⚠️  LLM failed to extract coordinates - using regex fallback", file=sys.stderr)
+                params.farmer_locations = self._extract_coordinates_regex(params.query)
+                if params.farmer_locations:
+                    print(f"✅ Regex extracted {len(params.farmer_locations)} coordinates", file=sys.stderr)
+
+        # Validate coordinates against data bounds (EXACTLY like MLU-04)
+        if params.farmer_locations:
+            LAT_MIN, LAT_MAX = 40.4, 40.9
+            LON_MIN, LON_MAX = 22.5, 22.9
+
+            location_errors = []
+            for i, loc in enumerate(params.farmer_locations, 1):
+                lat, lon = loc['lat'], loc['lon']
+                coord_errors = []
+
+                if not (LAT_MIN <= lat <= LAT_MAX):
+                    coord_errors.append(f"latitude {lat}° outside range [{LAT_MIN:.4f}°, {LAT_MAX:.4f}°]")
+                if not (LON_MIN <= lon <= LON_MAX):
+                    coord_errors.append(f"longitude {lon}° outside range [{LON_MIN:.4f}°, {LON_MAX:.4f}°]")
+
+                if coord_errors:
+                    location_errors.append(f"Location {i}: {'; '.join(coord_errors)}")
+
+            if location_errors:
+                # EXACTLY like irrigation/MLU-04: single line with " | " separators
+                error_msg = f"❌ COORDINATE VALIDATION FAILED! {' | '.join(location_errors)} | ⚠️ Coordinates must be within valid data bounds!"
+                print("\n" + error_msg, file=sys.stderr)
+                return MLUQueryOutput(
+                    user_story="MLU-05",
+                    result=error_msg,
+                    output_files=[],
+                    status="error"
+                )
+
+        # Validate required parameters
+        missing = []
+        if not params.years:
+            missing.append("--years")
+        if not params.parcels and not params.farmer_locations:
+            missing.append("--parcels (or specific farmer locations)")
+
+        if missing:
+            return MLUQueryOutput(
+                user_story="MLU-05",
+                result=f"❌ ERROR: MLU-05 requires {' and '.join(missing)} parameters\nPlease specify simulation duration and number of parcels (e.g., 'simulate for 10 years with 15 parcels') or specific coordinates.",
+                output_files=[],
+                status="error"
+            )
+
+        # Track defaults used
+        defaults_used = []
+
+        # DEBUG: Log extracted parameters
+        print(f"🔍 DEBUG MLU-05 extracted params:")
+        print(f"   scenario={params.scenario}")
+        print(f"   years={params.years}")
+        print(f"   parcels={params.parcels}")
+        print(f"   collectives={params.collectives}")
+        print(f"   markets={params.markets}")
+        print(f"   policymakers={params.policymakers}")
+
+        cmd = [sys.executable, str(self.mlu_path / "run_mlu.py"), "--query", "mlu_05"]
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        else:
+            defaults_used.append("scenario=ALL (showing all climate scenarios)")
+            print("⚠️  WARNING: No scenario extracted - will run ALL scenarios!")
+
+        if params.years:
+            cmd.extend(["--years", str(params.years)])
+
+        # NEW: Add farmer locations if specified (overrides parcels parameter)
+        if params.farmer_locations:
+            import json
+            locations_json = json.dumps(params.farmer_locations)
+            cmd.extend(["--farmer-locations", locations_json])
+            print(f"📍 Using {len(params.farmer_locations)} user-specified locations")
+
+            # CRITICAL: If user specifies locations, ignore parcels parameter
+            if params.parcels:
+                print(f"⚠️  WARNING: Ignoring --parcels={params.parcels} (using user-specified locations instead)")
+        elif params.parcels:
+            cmd.extend(["--parcels", str(params.parcels)])
+
+        # Add multi-level ABM parameters (CORE FEATURE - notify about defaults)
+        if params.collectives is not None:
+            cmd.extend(["--collectives", str(params.collectives)])
+        else:
+            defaults_used.append("collectives=2")
+
+        if params.markets is not None:
+            cmd.extend(["--markets", str(params.markets)])
+        else:
+            defaults_used.append("markets=1")
+
+        if params.policymakers is not None:
+            cmd.extend(["--policies", str(params.policymakers)])
+        else:
+            defaults_used.append("policymakers=1")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.mlu_path, timeout=600)
+
+        # Collect output files (check both single scenario and comparison dirs with timestamps)
+        output_files = []
+        # Check for specific scenario output (with timestamp subdirectories)
+        if params.scenario:
+            output_dir = self.mlu_path / "results" / f"mlu_05_{params.scenario}"
+            if output_dir.exists():
+                # Find latest timestamp folder
+                timestamp_folders = sorted([d for d in output_dir.iterdir() if d.is_dir()], reverse=True)
+                if timestamp_folders:
+                    latest = timestamp_folders[0]
+                    # Add TXT files FIRST (from timestamp root - so results appear at top)
+                    output_files.extend([str(f) for f in latest.glob("*.txt")])
+                    # Look in visualizations subfolder for HTML/PNG
+                    viz_dir = latest / "visualizations"
+                    if viz_dir.exists():
+                        output_files.extend([str(f) for f in viz_dir.glob("*.html")])
+                        output_files.extend([str(f) for f in viz_dir.glob("*.png")])
+                    # CSV files from timestamp root
+                    output_files.extend([str(f) for f in latest.glob("*.csv")])
+                    output_files.extend([str(f) for f in latest.glob("*.json")])
+        else:
+            # Only check comparison output when NO specific scenario requested
+            comparison_dir = self.mlu_path / "results" / "mlu_05_comparison"
+            if comparison_dir.exists():
+                output_files.extend([str(f) for f in comparison_dir.glob("*.html")])
+                output_files.extend([str(f) for f in comparison_dir.glob("*.png")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return MLUQueryOutput(
+            user_story="MLU-05",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_mlu_07(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """MLU-07: Historical Benchmark"""
+        # Track defaults used
+        defaults_used = []
+
+        cmd = [sys.executable, str(self.mlu_path / "run_mlu.py"), "--query", "mlu_07"]
+
+        if params.crop:
+            cmd.extend(["--crop", params.crop])
+        else:
+            defaults_used.append("crop=ALL (showing WHEAT + MAIZE)")
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        else:
+            defaults_used.append("scenario=ALL (showing all climate scenarios)")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.mlu_path, timeout=600)
+
+        # Collect output files (with timestamp subdirectories)
+        output_files = []
+        output_dir = self.mlu_path / "results" / "mlu_07"
+        if output_dir.exists():
+            # Find latest timestamp folder
+            timestamp_folders = sorted([d for d in output_dir.iterdir() if d.is_dir()], reverse=True)
+            if timestamp_folders:
+                latest = timestamp_folders[0]
+                # Add TXT files FIRST (from timestamp root)
+                output_files.extend([str(f) for f in latest.glob("*.txt")])
+                # Look in visualizations subfolder for HTML/PNG
+                viz_dir = latest / "visualizations"
+                if viz_dir.exists():
+                    output_files.extend([str(f) for f in viz_dir.glob("*.html")])
+                    output_files.extend([str(f) for f in viz_dir.glob("*.png")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return MLUQueryOutput(
+            user_story="MLU-07",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _run_mlu_08(self, params: MLUQueryInput) -> MLUQueryOutput:
+        """MLU-08: Future Scenarios"""
+        # Track defaults used
+        defaults_used = []
+
+        cmd = [sys.executable, str(self.mlu_path / "run_mlu.py"), "--query", "mlu_08"]
+
+        if params.crop:
+            cmd.extend(["--crop", params.crop])
+        else:
+            defaults_used.append("crop=ALL (showing WHEAT + MAIZE)")
+
+        if params.scenario:
+            cmd.extend(["--scenario", params.scenario])
+        else:
+            defaults_used.append("scenario=ALL (showing all climate scenarios)")
+
+        # Add simulation parameters (years, parcels)
+        if params.years is not None:
+            cmd.extend(["--years", str(params.years)])
+        else:
+            defaults_used.append("years=10")
+
+        if params.parcels is not None:
+            cmd.extend(["--parcels", str(params.parcels)])
+        else:
+            defaults_used.append("parcels=15")
+
+        # Add multi-level ABM parameters (CORE FEATURE - notify about defaults)
+        if params.collectives is not None:
+            cmd.extend(["--collectives", str(params.collectives)])
+        else:
+            defaults_used.append("collectives=2")
+
+        if params.markets is not None:
+            cmd.extend(["--markets", str(params.markets)])
+        else:
+            defaults_used.append("markets=1")
+
+        if params.policymakers is not None:
+            cmd.extend(["--policies", str(params.policymakers)])
+        else:
+            defaults_used.append("policymakers=1")
+
+        # Add ensemble parameters (MLU-08 only)
+        if params.ensemble_size is not None:
+            cmd.extend(["--ensemble-size", str(params.ensemble_size)])
+        else:
+            defaults_used.append("ensemble_size=30")
+
+        if params.enable_ensemble:
+            cmd.append("--ensemble")
+
+        # Add geojson spatial filtering if provided
+        if params.geojson_file:
+            cmd.extend(["--geojson-file", params.geojson_file])
+
+        # Allow stderr to flow to terminal (for snap-to-grid logging), only capture stdout
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, text=True, cwd=self.mlu_path, timeout=600)
+
+        # Collect output files (with timestamp subdirectories)
+        output_files = []
+        output_dir = self.mlu_path / "results" / "mlu_08"
+        if output_dir.exists():
+            # Find latest timestamp folder
+            timestamp_folders = sorted([d for d in output_dir.iterdir() if d.is_dir()], reverse=True)
+            if timestamp_folders:
+                latest = timestamp_folders[0]
+
+                # Collect from main timestamped directory (JSON policy recommendations, ensemble stats)
+                output_files.extend([str(f) for f in latest.glob("*.json")])
+                output_files.extend([str(f) for f in latest.glob("*.txt")])
+
+                # Collect from ensemble_visualizations subdirectory (MAIN VISUALIZATIONS)
+                ensemble_viz_dir = latest / "ensemble_visualizations"
+                if ensemble_viz_dir.exists():
+                    output_files.extend([str(f) for f in ensemble_viz_dir.glob("*.html")])
+                    output_files.extend([str(f) for f in ensemble_viz_dir.glob("*.png")])
+
+                # Collect CSV files from individual ensemble run subdirectories (ensemble_0, ensemble_1, etc.)
+                # Path: {timestamp}/ensemble_N/scenario/{timestamp_inner}/*.csv
+                for ensemble_subdir in latest.glob("ensemble_[0-9]*"):
+                    if ensemble_subdir.is_dir():
+                        # CSV files are in ensemble_N/scenario/{timestamp_inner}/ subdirectory
+                        for scenario_subdir in ensemble_subdir.glob("*"):
+                            if scenario_subdir.is_dir():
+                                # These have their own timestamps from the simulation
+                                timestamp_inner_folders = sorted([d for d in scenario_subdir.iterdir() if d.is_dir()], reverse=True)
+                                if timestamp_inner_folders:
+                                    latest_inner = timestamp_inner_folders[0]
+                                    output_files.extend([str(f) for f in latest_inner.glob("*.csv")])
+                                    output_files.extend([str(f) for f in latest_inner.glob("*.txt")])
+                                    output_files.extend([str(f) for f in latest_inner.glob("*.json")])
+
+        # Prepend defaults notification to result (will be extracted by backend)
+        result_text = result.stdout if result.returncode == 0 else result.stderr
+        if defaults_used:
+            defaults_msg = "ℹ️  Using default values: " + ", ".join(defaults_used)
+            result_text = defaults_msg + "\n\n" + result_text
+
+        return MLUQueryOutput(
+            user_story="MLU-08",
+            result=result_text,
+            output_files=output_files,
+            status="success" if result.returncode == 0 else "error"
+        )
+
+    def _extract_files(self, stdout: str) -> list[str]:
+        """Extract file paths from output"""
+        files = []
+        patterns = [
+            r"saved to[:\s]+([^\s\n]+\.html)",
+            r"saved to[:\s]+([^\s\n]+\.png)",
+            r"Output[:\s]+([^\s\n]+)",
+            r"results/[^\s\n]+"
+        ]
+        for pattern in patterns:
+            files.extend(re.findall(pattern, stdout, re.IGNORECASE))
+        return list(set(files))
+
+
+    def _extract_coordinates_regex(self, query: str) -> list[dict] | None:
+        """
+        Fallback coordinate extractor using regex.
+        Extracts all (lat, lon) pairs from query.
+        For MLU, crop defaults to WHEAT (will be overridden by categorization in MLU-04).
+        """
+        import re
+
+        # Pattern: (number, number) where numbers can be floats
+        # Use groups to extract lat and lon separately
+        pattern = r'\((\d+\.?\d*),\s*(\d+\.?\d*)\)'
+        matches = re.findall(pattern, query)
+
+        if not matches:
+            return None
+
+        locations = []
+        for lat_str, lon_str in matches:
+            locations.append({
+                'lat': float(lat_str),
+                'lon': float(lon_str),
+                'crop': 'WHEAT'  # Default for MLU (categorization will determine best use)
+            })
+
+        return locations
+
+# Test
+if __name__ == "__main__":
+    print("Testing MLU Tool...")
+    tool = MLUTool()
+    test = MLUQueryInput(query="Run simulation for wheat under RCP 4.5", scenario="rcp45", crop="WHEAT")
+    result = tool.run(test)
+    print(f"User Story: {result.user_story}")
+    print(f"Status: {result.status}")
+

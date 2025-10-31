@@ -1,0 +1,32 @@
+============================================================
+RL-02 RESULTS - RCP45
+============================================================
+
+Configuration:
+  Scenario: rcp45
+  Timesteps: 200000
+  Episode length: 50 years
+
+Test Episodes (3 runs):
+
+Episode 1:
+  Total Reward: 17.90
+  Avg Income: 5049.86€
+  Actions: WHEAT=33, MAIZE=0, SOLAR=17
+
+Episode 2:
+  Total Reward: 60.40
+  Avg Income: 9367.49€
+  Actions: WHEAT=6, MAIZE=0, SOLAR=44
+
+Episode 3:
+  Total Reward: 38.25
+  Avg Income: 5674.55€
+  Actions: WHEAT=6, MAIZE=0, SOLAR=44
+
+Averages:
+  Reward: 38.85
+  Income: 6697.30€
+
+Model: models/rl02/rl02_rcp45_final.zip
+TensorBoard: models/rl02/tensorboard/

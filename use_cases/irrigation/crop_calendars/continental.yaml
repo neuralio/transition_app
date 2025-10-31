@@ -1,0 +1,162 @@
+# Crop Calendar for Continental Climate Zone
+# Applicable regions: Poland, Germany, Czech Republic, Austria, Hungary
+
+# ==============================================================================
+# SUMMER CROPS (sown in spring, harvested in autumn)
+# ==============================================================================
+summer_crops:
+  - name: "MAIZE"
+    description: "Corn (main summer crop in Continental Europe)"
+
+    # Sowing window (later than Mediterranean due to colder springs)
+    sowing_window:
+      start: 105  # Mid-April (after frost risk)
+      end: 135    # Mid-May
+
+    # Harvest window (later than Mediterranean due to cooler summers)
+    harvest_window:
+      start: 270  # Late September
+      end: 300    # Late October
+
+    flooding_required: false
+
+    # Water requirements (lower than Mediterranean due to more rainfall)
+    total_irrigation_mm: 250  # ~250mm supplemental irrigation
+    irrigation_method: "deficit"
+
+  - name: "SUGAR_BEET"
+    description: "Sugar beet (common in Central/Eastern Europe)"
+
+    sowing_window:
+      start: 75   # Mid-March
+      end: 105    # Mid-April
+
+    harvest_window:
+      start: 270  # Late September
+      end: 300    # Late October
+
+    flooding_required: false
+
+    total_irrigation_mm: 200  # ~200mm
+    irrigation_method: "deficit"
+
+  - name: "SUNFLOWER"
+    description: "Sunflower (drought-tolerant)"
+
+    sowing_window:
+      start: 90   # Early April
+      end: 120    # Early May
+
+    harvest_window:
+      start: 240  # Early September
+      end: 270    # Late September
+
+    flooding_required: false
+
+    total_irrigation_mm: 150  # ~150mm minimal irrigation
+    irrigation_method: "deficit"
+
+# ==============================================================================
+# WINTER CROPS (sown in autumn, harvested in summer)
+# ==============================================================================
+winter_crops:
+  - name: "WINTER_WHEAT"
+    description: "Wheat (main winter crop, mostly rainfed)"
+
+    sowing_window:
+      start: 260  # Mid-September (earlier than Mediterranean)
+      end: 290    # Mid-October
+
+    harvest_window:
+      start: 180  # Late June
+      end: 210    # Late July
+
+    flooding_required: false
+
+    total_irrigation_mm: 50   # ~50mm (rarely needed due to higher rainfall)
+    irrigation_method: "rainfed"
+
+  - name: "WINTER_BARLEY"
+    description: "Barley (common in Central Europe)"
+
+    sowing_window:
+      start: 260  # Mid-September
+      end: 290    # Mid-October
+
+    harvest_window:
+      start: 165  # Mid-June (earlier than wheat)
+      end: 195    # Mid-July
+
+    flooding_required: false
+
+    total_irrigation_mm: 50
+    irrigation_method: "rainfed"
+
+  - name: "WINTER_RAPESEED"
+    description: "Rapeseed/Canola (oilseed crop)"
+
+    sowing_window:
+      start: 230  # Mid-August
+      end: 260    # Mid-September
+
+    harvest_window:
+      start: 180  # Late June
+      end: 210    # Late July
+
+    flooding_required: false
+
+    total_irrigation_mm: 100
+    irrigation_method: "deficit"
+
+# ==============================================================================
+# CLASSIFICATION WINDOWS (adjusted for Continental climate)
+# ==============================================================================
+classification_windows:
+  # End of summer: August-September (before winter crop sowing)
+  end_of_summer:
+    start: 225  # Mid-August
+    end: 260    # Mid-September
+    description: "Detect bare soil after summer harvest → assign winter crop"
+
+  # End of winter: March-April (before summer crop sowing)
+  end_of_winter:
+    start: 60   # Early March
+    end: 90     # Early April
+    description: "Detect bare soil after winter harvest → assign summer crop"
+
+# ==============================================================================
+# CROP ROTATION RULES (Continental Europe)
+# ==============================================================================
+crop_rotation:
+  # Summer-to-winter rule (stochastic - more crop diversity than Mediterranean)
+  summer_to_winter:
+    rule: "IF bare_in_summer THEN probabilistically assign winter crop"
+    crops:
+      - name: "WINTER_WHEAT"
+        probability: 0.5  # 50% wheat
+      - name: "WINTER_BARLEY"
+        probability: 0.3  # 30% barley
+      - name: "WINTER_RAPESEED"
+        probability: 0.2  # 20% rapeseed
+
+  # Winter-to-summer rule (stochastic)
+  winter_to_summer:
+    rule: "IF bare_in_winter THEN probabilistically assign summer crop"
+    crops:
+      - name: "MAIZE"
+        probability: 0.5  # 50% maize
+      - name: "SUGAR_BEET"
+        probability: 0.3  # 30% sugar beet
+      - name: "SUNFLOWER"
+        probability: 0.2  # 20% sunflower
+
+# ==============================================================================
+# REGIONAL NOTES
+# ==============================================================================
+# - NO RICE cultivation in Continental Europe (too cold, no flooding infrastructure)
+# - Maize is the dominant summer crop (for silage and grain)
+# - Sugar beet is economically important (EU sugar production)
+# - Winter cereals (wheat, barley) benefit from vernalization (cold period)
+# - Irrigation needs are MUCH LOWER than Mediterranean due to higher rainfall
+#   (typically 400-600mm annual precipitation vs. 300-400mm in Mediterranean)
+# - Frost risk extends to mid-April, limiting early sowing

@@ -1,0 +1,1174 @@
+============================================================
+RL-02: TRAINING MLU AGENT
+============================================================
+Scenario: rcp45
+Total timesteps: 200000
+Started: 20251011_123229
+============================================================
+
+
+Iteration 2048:
+
+Iteration 4096:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0902020763605833
+  train/policy_gradient_loss: -0.002513722807634622
+  train/value_loss: 7.528324384242296
+  train/approx_kl: 0.012214777059853077
+  train/clip_fraction: 0.055810546875
+  train/loss: 1.4588719606399536
+  train/explained_variance: -0.002466440200805664
+  train/n_updates: 10
+  train/clip_range: 0.2
+
+Iteration 6144:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0941150695085526
+  train/policy_gradient_loss: -0.005215559509815648
+  train/value_loss: 12.067950156331062
+  train/approx_kl: 0.01071242243051529
+  train/clip_fraction: 0.052587890625
+  train/loss: 4.555975437164307
+  train/explained_variance: 0.12783968448638916
+  train/n_updates: 20
+  train/clip_range: 0.2
+
+Iteration 8192:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0920132614672184
+  train/policy_gradient_loss: -0.0006043667424819432
+  train/value_loss: 15.938026794791222
+  train/approx_kl: 0.002707790583372116
+  train/clip_fraction: 0.0
+  train/loss: 5.58607816696167
+  train/explained_variance: 0.07946604490280151
+  train/n_updates: 30
+  train/clip_range: 0.2
+
+Iteration 10240:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0937965456396341
+  train/policy_gradient_loss: -0.002003913413500413
+  train/value_loss: 17.536906215548516
+  train/approx_kl: 0.0031282741110771894
+  train/clip_fraction: 0.0
+  train/loss: 11.846948623657227
+  train/explained_variance: 0.1313146948814392
+  train/n_updates: 40
+  train/clip_range: 0.2
+
+Iteration 12288:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0974794868379831
+  train/policy_gradient_loss: -0.0003964733274187893
+  train/value_loss: 19.2026058614254
+  train/approx_kl: 0.0006480221636593342
+  train/clip_fraction: 0.0
+  train/loss: 8.617636680603027
+  train/explained_variance: 0.15686464309692383
+  train/n_updates: 50
+  train/clip_range: 0.2
+
+Iteration 14336:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0978432565927505
+  train/policy_gradient_loss: -0.0004888956900686026
+  train/value_loss: 19.150091937184335
+  train/approx_kl: 0.001437329687178135
+  train/clip_fraction: 0.0
+  train/loss: 9.877307891845703
+  train/explained_variance: 0.19661420583724976
+  train/n_updates: 60
+  train/clip_range: 0.2
+
+Iteration 16384:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0968458775430918
+  train/policy_gradient_loss: -0.00045956025132909417
+  train/value_loss: 20.008425667881966
+  train/approx_kl: 0.002014506608247757
+  train/clip_fraction: 0.0
+  train/loss: 12.840214729309082
+  train/explained_variance: 0.2105497121810913
+  train/n_updates: 70
+  train/clip_range: 0.2
+
+Iteration 18432:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0945407085120678
+  train/policy_gradient_loss: -9.851214708760381e-05
+  train/value_loss: 19.737645041942596
+  train/approx_kl: 0.0006519437301903963
+  train/clip_fraction: 0.0
+  train/loss: 7.897751331329346
+  train/explained_variance: 0.23087704181671143
+  train/n_updates: 80
+  train/clip_range: 0.2
+
+Iteration 20480:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0912673447281123
+  train/policy_gradient_loss: -0.0017597240483155474
+  train/value_loss: 20.015022224187852
+  train/approx_kl: 0.005828984081745148
+  train/clip_fraction: 0.0
+  train/loss: 10.80263614654541
+  train/explained_variance: 0.2360631823539734
+  train/n_updates: 90
+  train/clip_range: 0.2
+
+Iteration 22528:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0908339064568282
+  train/policy_gradient_loss: -0.0006253844141610899
+  train/value_loss: 20.374680745601655
+  train/approx_kl: 0.0011096769012510777
+  train/clip_fraction: 0.0
+  train/loss: 10.176506996154785
+  train/explained_variance: 0.2432270050048828
+  train/n_updates: 100
+  train/clip_range: 0.2
+
+Iteration 24576:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.092449513450265
+  train/policy_gradient_loss: -0.00046227753773564473
+  train/value_loss: 20.275672072172163
+  train/approx_kl: 0.0008499365067109466
+  train/clip_fraction: 0.0
+  train/loss: 11.433564186096191
+  train/explained_variance: 0.2485637068748474
+  train/n_updates: 110
+  train/clip_range: 0.2
+
+Iteration 26624:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0909658957272768
+  train/policy_gradient_loss: -0.0004872769204666838
+  train/value_loss: 19.934940266609193
+  train/approx_kl: 0.000596150232013315
+  train/clip_fraction: 0.0
+  train/loss: 7.77092170715332
+  train/explained_variance: 0.24928003549575806
+  train/n_updates: 120
+  train/clip_range: 0.2
+
+Iteration 28672:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.095726815611124
+  train/policy_gradient_loss: -0.0003384631185326725
+  train/value_loss: 19.782360699772834
+  train/approx_kl: 0.0004749087675008923
+  train/clip_fraction: 0.0
+  train/loss: 7.02338171005249
+  train/explained_variance: 0.24150371551513672
+  train/n_updates: 130
+  train/clip_range: 0.2
+
+Iteration 30720:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0961636696010828
+  train/policy_gradient_loss: -0.00018164480861742048
+  train/value_loss: 20.012853026390076
+  train/approx_kl: 0.0005317082395777106
+  train/clip_fraction: 0.0
+  train/loss: 11.264557838439941
+  train/explained_variance: 0.2503514885902405
+  train/n_updates: 140
+  train/clip_range: 0.2
+
+Iteration 32768:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0936950787901878
+  train/policy_gradient_loss: -0.0009533006552373991
+  train/value_loss: 19.023170918226242
+  train/approx_kl: 0.007727126590907574
+  train/clip_fraction: 0.00751953125
+  train/loss: 8.682976722717285
+  train/explained_variance: 0.28290337324142456
+  train/n_updates: 150
+  train/clip_range: 0.2
+
+Iteration 34816:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0880534548312426
+  train/policy_gradient_loss: -7.2724506026133895e-06
+  train/value_loss: 17.294712418317793
+  train/approx_kl: 0.00013374158879742026
+  train/clip_fraction: 0.0
+  train/loss: 8.908825874328613
+  train/explained_variance: 0.2966630458831787
+  train/n_updates: 160
+  train/clip_range: 0.2
+
+Iteration 36864:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.08718115799129
+  train/policy_gradient_loss: -0.0004726573795778677
+  train/value_loss: 17.195830035209656
+  train/approx_kl: 0.002158123068511486
+  train/clip_fraction: 0.0
+  train/loss: 8.7999267578125
+  train/explained_variance: 0.3190240263938904
+  train/n_updates: 170
+  train/clip_range: 0.2
+
+Iteration 38912:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.084675521403551
+  train/policy_gradient_loss: -0.001130792510230094
+  train/value_loss: 17.958240085840224
+  train/approx_kl: 0.0023099719546735287
+  train/clip_fraction: 0.0
+  train/loss: 8.131564140319824
+  train/explained_variance: 0.3152919411659241
+  train/n_updates: 180
+  train/clip_range: 0.2
+
+Iteration 40960:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0895833097398282
+  train/policy_gradient_loss: -0.000440196946146898
+  train/value_loss: 16.148859444260598
+  train/approx_kl: 0.002572788391262293
+  train/clip_fraction: 0.0
+  train/loss: 8.378924369812012
+  train/explained_variance: 0.3304256200790405
+  train/n_updates: 190
+  train/clip_range: 0.2
+
+Iteration 43008:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0929728027433157
+  train/policy_gradient_loss: -0.0005483754212036729
+  train/value_loss: 16.32519050836563
+  train/approx_kl: 0.0014578636037185788
+  train/clip_fraction: 0.0
+  train/loss: 7.725793838500977
+  train/explained_variance: 0.35161179304122925
+  train/n_updates: 200
+  train/clip_range: 0.2
+
+Iteration 45056:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0977249898016452
+  train/policy_gradient_loss: -0.0004879788699327037
+  train/value_loss: 17.09221176803112
+  train/approx_kl: 0.0019481005147099495
+  train/clip_fraction: 0.0
+  train/loss: 7.087414741516113
+  train/explained_variance: 0.33967363834381104
+  train/n_updates: 210
+  train/clip_range: 0.2
+
+Iteration 47104:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0958290860056876
+  train/policy_gradient_loss: -0.0005258133955067023
+  train/value_loss: 16.872484660148622
+  train/approx_kl: 0.00237732520326972
+  train/clip_fraction: 0.0
+  train/loss: 7.810927867889404
+  train/explained_variance: 0.3468896150588989
+  train/n_updates: 220
+  train/clip_range: 0.2
+
+Iteration 49152:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0923497755080462
+  train/policy_gradient_loss: -0.002772068275953643
+  train/value_loss: 16.771884682774544
+  train/approx_kl: 0.010400475934147835
+  train/clip_fraction: 0.02392578125
+  train/loss: 7.793511867523193
+  train/explained_variance: 0.3562847971916199
+  train/n_updates: 230
+  train/clip_range: 0.2
+
+Iteration 51200:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0780469980090857
+  train/policy_gradient_loss: -0.0030162262512021696
+  train/value_loss: 16.469182634353636
+  train/approx_kl: 0.010604480281472206
+  train/clip_fraction: 0.014453125
+  train/loss: 8.310561180114746
+  train/explained_variance: 0.36118966341018677
+  train/n_updates: 240
+  train/clip_range: 0.2
+
+Iteration 53248:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0602196417748928
+  train/policy_gradient_loss: -0.005502279533538967
+  train/value_loss: 15.143965849280358
+  train/approx_kl: 0.009824402630329132
+  train/clip_fraction: 0.044384765625
+  train/loss: 7.467401504516602
+  train/explained_variance: 0.35837429761886597
+  train/n_updates: 250
+  train/clip_range: 0.2
+
+Iteration 55296:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.045637037232518
+  train/policy_gradient_loss: -0.0009480029955739155
+  train/value_loss: 14.713533446192741
+  train/approx_kl: 0.003844229504466057
+  train/clip_fraction: 0.0
+  train/loss: 5.688709259033203
+  train/explained_variance: 0.36145198345184326
+  train/n_updates: 260
+  train/clip_range: 0.2
+
+Iteration 57344:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0538908835500478
+  train/policy_gradient_loss: -0.004504921694751829
+  train/value_loss: 14.97140536904335
+  train/approx_kl: 0.004167531616985798
+  train/clip_fraction: 0.044873046875
+  train/loss: 8.549579620361328
+  train/explained_variance: 0.3587428331375122
+  train/n_updates: 270
+  train/clip_range: 0.2
+
+Iteration 59392:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.077155190333724
+  train/policy_gradient_loss: -0.0023054347140714524
+  train/value_loss: 15.201504611968994
+  train/approx_kl: 0.011805301532149315
+  train/clip_fraction: 0.026220703125
+  train/loss: 5.6034135818481445
+  train/explained_variance: 0.35929983854293823
+  train/n_updates: 280
+  train/clip_range: 0.2
+
+Iteration 61440:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0690825458616018
+  train/policy_gradient_loss: -0.0034495306492317466
+  train/value_loss: 15.593539187312127
+  train/approx_kl: 0.009949733503162861
+  train/clip_fraction: 0.0267578125
+  train/loss: 8.200647354125977
+  train/explained_variance: 0.36362922191619873
+  train/n_updates: 290
+  train/clip_range: 0.2
+
+Iteration 63488:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0739433903247118
+  train/policy_gradient_loss: -0.001275914692087099
+  train/value_loss: 17.16519365310669
+  train/approx_kl: 0.007094694301486015
+  train/clip_fraction: 0.018212890625
+  train/loss: 10.2971830368042
+  train/explained_variance: 0.34737640619277954
+  train/n_updates: 300
+  train/clip_range: 0.2
+
+Iteration 65536:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.075127050280571
+  train/policy_gradient_loss: -0.00203559237124864
+  train/value_loss: 18.350600889325143
+  train/approx_kl: 0.010086128488183022
+  train/clip_fraction: 0.036669921875
+  train/loss: 5.436856269836426
+  train/explained_variance: 0.3462017774581909
+  train/n_updates: 310
+  train/clip_range: 0.2
+
+Iteration 67584:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.048854475468397
+  train/policy_gradient_loss: -0.00134592220565537
+  train/value_loss: 16.974053144454956
+  train/approx_kl: 0.004656863398849964
+  train/clip_fraction: 0.000732421875
+  train/loss: 7.709214687347412
+  train/explained_variance: 0.3681182861328125
+  train/n_updates: 320
+  train/clip_range: 0.2
+
+Iteration 69632:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0536407571285964
+  train/policy_gradient_loss: -0.00487339525425341
+  train/value_loss: 16.994464987516402
+  train/approx_kl: 0.010048702359199524
+  train/clip_fraction: 0.037109375
+  train/loss: 12.8458890914917
+  train/explained_variance: 0.36650627851486206
+  train/n_updates: 330
+  train/clip_range: 0.2
+
+Iteration 71680:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0438296873122455
+  train/policy_gradient_loss: -0.003920779883628711
+  train/value_loss: 17.08034681081772
+  train/approx_kl: 0.008598361164331436
+  train/clip_fraction: 0.05048828125
+  train/loss: 9.40283203125
+  train/explained_variance: 0.35496020317077637
+  train/n_updates: 340
+  train/clip_range: 0.2
+
+Iteration 73728:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0486527103930712
+  train/policy_gradient_loss: -0.0006719675206113606
+  train/value_loss: 16.474574065208436
+  train/approx_kl: 0.0030345767736434937
+  train/clip_fraction: 0.0158203125
+  train/loss: 7.529585361480713
+  train/explained_variance: 0.36091381311416626
+  train/n_updates: 350
+  train/clip_range: 0.2
+
+Iteration 75776:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0679044995456934
+  train/policy_gradient_loss: -0.0026654237881302834
+  train/value_loss: 15.139372780919075
+  train/approx_kl: 0.01131177693605423
+  train/clip_fraction: 0.04169921875
+  train/loss: 7.430608749389648
+  train/explained_variance: 0.37680381536483765
+  train/n_updates: 360
+  train/clip_range: 0.2
+
+Iteration 77824:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.082559335976839
+  train/policy_gradient_loss: -0.0026229447132209314
+  train/value_loss: 14.953843469917775
+  train/approx_kl: 0.005779502913355827
+  train/clip_fraction: 0.00693359375
+  train/loss: 5.086904525756836
+  train/explained_variance: 0.37566596269607544
+  train/n_updates: 370
+  train/clip_range: 0.2
+
+Iteration 79872:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0643348831683397
+  train/policy_gradient_loss: 0.0005169901356566698
+  train/value_loss: 15.2242712110281
+  train/approx_kl: 0.004850598983466625
+  train/clip_fraction: 0.032470703125
+  train/loss: 6.131356239318848
+  train/explained_variance: 0.36889320611953735
+  train/n_updates: 380
+  train/clip_range: 0.2
+
+Iteration 81920:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0811173256486655
+  train/policy_gradient_loss: -0.0015513721693423577
+  train/value_loss: 15.634774392843246
+  train/approx_kl: 0.015667157247662544
+  train/clip_fraction: 0.023974609375
+  train/loss: 7.5369062423706055
+  train/explained_variance: 0.34623080492019653
+  train/n_updates: 390
+  train/clip_range: 0.2
+
+Iteration 83968:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.091114166378975
+  train/policy_gradient_loss: -0.0016620072186924518
+  train/value_loss: 16.08799654841423
+  train/approx_kl: 0.0031806533224880695
+  train/clip_fraction: 0.0
+  train/loss: 6.831417560577393
+  train/explained_variance: 0.36306333541870117
+  train/n_updates: 400
+  train/clip_range: 0.2
+
+Iteration 86016:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0687241114675998
+  train/policy_gradient_loss: -0.002717208073590882
+  train/value_loss: 16.305275383591653
+  train/approx_kl: 0.011174781247973442
+  train/clip_fraction: 0.040185546875
+  train/loss: 7.125960826873779
+  train/explained_variance: 0.3632659912109375
+  train/n_updates: 410
+  train/clip_range: 0.2
+
+Iteration 88064:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0572312101721764
+  train/policy_gradient_loss: -0.0032997403999615927
+  train/value_loss: 15.428825202584267
+  train/approx_kl: 0.007064299192279577
+  train/clip_fraction: 0.039208984375
+  train/loss: 7.8309526443481445
+  train/explained_variance: 0.36513692140579224
+  train/n_updates: 420
+  train/clip_range: 0.2
+
+Iteration 90112:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0242396568879486
+  train/policy_gradient_loss: -0.0030869327776599674
+  train/value_loss: 15.996245470643043
+  train/approx_kl: 0.013192521408200264
+  train/clip_fraction: 0.034033203125
+  train/loss: 5.429577827453613
+  train/explained_variance: 0.3560451865196228
+  train/n_updates: 430
+  train/clip_range: 0.2
+
+Iteration 92160:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0461304772645235
+  train/policy_gradient_loss: -0.0030379172327229752
+  train/value_loss: 14.983081483840943
+  train/approx_kl: 0.014967812225222588
+  train/clip_fraction: 0.071240234375
+  train/loss: 5.553719997406006
+  train/explained_variance: 0.36143869161605835
+  train/n_updates: 440
+  train/clip_range: 0.2
+
+Iteration 94208:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0716204132884741
+  train/policy_gradient_loss: 0.00022251183982007204
+  train/value_loss: 15.18123168796301
+  train/approx_kl: 0.0015813717618584633
+  train/clip_fraction: 0.049609375
+  train/loss: 6.588376998901367
+  train/explained_variance: 0.35207849740982056
+  train/n_updates: 450
+  train/clip_range: 0.2
+
+Iteration 96256:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.081766167283058
+  train/policy_gradient_loss: -0.00416722456284333
+  train/value_loss: 15.239064615964889
+  train/approx_kl: 0.01147331390529871
+  train/clip_fraction: 0.03740234375
+  train/loss: 7.653354644775391
+  train/explained_variance: 0.35558462142944336
+  train/n_updates: 460
+  train/clip_range: 0.2
+
+Iteration 98304:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0896642211824656
+  train/policy_gradient_loss: -0.0038232590159168467
+  train/value_loss: 15.429685074090958
+  train/approx_kl: 0.010875089094042778
+  train/clip_fraction: 0.061767578125
+  train/loss: 9.634503364562988
+  train/explained_variance: 0.3644474744796753
+  train/n_updates: 470
+  train/clip_range: 0.2
+
+Iteration 100352:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0898003589361906
+  train/policy_gradient_loss: -0.0021275036822771655
+  train/value_loss: 16.496616169810295
+  train/approx_kl: 0.006239922717213631
+  train/clip_fraction: 0.0396484375
+  train/loss: 9.144705772399902
+  train/explained_variance: 0.35278111696243286
+  train/n_updates: 480
+  train/clip_range: 0.2
+
+Iteration 102400:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.08698591850698
+  train/policy_gradient_loss: -0.0018114549704478123
+  train/value_loss: 17.017687675356864
+  train/approx_kl: 0.003561942605301738
+  train/clip_fraction: 0.022607421875
+  train/loss: 10.090818405151367
+  train/explained_variance: 0.36567145586013794
+  train/n_updates: 490
+  train/clip_range: 0.2
+
+Iteration 104448:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.087499549612403
+  train/policy_gradient_loss: -0.0005117008622619323
+  train/value_loss: 15.581181260943413
+  train/approx_kl: 0.005338515155017376
+  train/clip_fraction: 0.0125
+  train/loss: 8.505751609802246
+  train/explained_variance: 0.36350518465042114
+  train/n_updates: 500
+  train/clip_range: 0.2
+
+Iteration 106496:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.083134300261736
+  train/policy_gradient_loss: -0.0016091333294752986
+  train/value_loss: 16.967943307757377
+  train/approx_kl: 0.00885875802487135
+  train/clip_fraction: 0.007421875
+  train/loss: 7.20099401473999
+  train/explained_variance: 0.3472279906272888
+  train/n_updates: 510
+  train/clip_range: 0.2
+
+Iteration 108544:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0841212548315524
+  train/policy_gradient_loss: -0.0052163762811687775
+  train/value_loss: 16.339559292793275
+  train/approx_kl: 0.015297435224056244
+  train/clip_fraction: 0.018017578125
+  train/loss: 11.429173469543457
+  train/explained_variance: 0.36344438791275024
+  train/n_updates: 520
+  train/clip_range: 0.2
+
+Iteration 110592:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0870233055204153
+  train/policy_gradient_loss: -0.0010664689965778963
+  train/value_loss: 17.00311737060547
+  train/approx_kl: 0.011305198073387146
+  train/clip_fraction: 0.0919921875
+  train/loss: 7.002071380615234
+  train/explained_variance: 0.36463814973831177
+  train/n_updates: 530
+  train/clip_range: 0.2
+
+Iteration 112640:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0892928887158633
+  train/policy_gradient_loss: -0.0026442603848408908
+  train/value_loss: 17.860854935646056
+  train/approx_kl: 0.009601257741451263
+  train/clip_fraction: 0.0041015625
+  train/loss: 7.042018890380859
+  train/explained_variance: 0.3579413890838623
+  train/n_updates: 540
+  train/clip_range: 0.2
+
+Iteration 114688:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0867254711687564
+  train/policy_gradient_loss: -0.002879314614983741
+  train/value_loss: 17.11432439684868
+  train/approx_kl: 0.007106130942702293
+  train/clip_fraction: 0.040771484375
+  train/loss: 8.205130577087402
+  train/explained_variance: 0.37244611978530884
+  train/n_updates: 550
+  train/clip_range: 0.2
+
+Iteration 116736:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0869984835386277
+  train/policy_gradient_loss: -0.0023577266256324947
+  train/value_loss: 16.20904053747654
+  train/approx_kl: 0.007530007977038622
+  train/clip_fraction: 0.01982421875
+  train/loss: 8.269767761230469
+  train/explained_variance: 0.36665481328964233
+  train/n_updates: 560
+  train/clip_range: 0.2
+
+Iteration 118784:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0850116103887557
+  train/policy_gradient_loss: -0.0007458878622855991
+  train/value_loss: 16.713571956753732
+  train/approx_kl: 0.0061211371794342995
+  train/clip_fraction: 0.0056640625
+  train/loss: 7.236699104309082
+  train/explained_variance: 0.3624356985092163
+  train/n_updates: 570
+  train/clip_range: 0.2
+
+Iteration 120832:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0674088463187217
+  train/policy_gradient_loss: -0.0028365044214297085
+  train/value_loss: 14.860509084165097
+  train/approx_kl: 0.006972393486648798
+  train/clip_fraction: 0.015869140625
+  train/loss: 6.40273380279541
+  train/explained_variance: 0.3680756092071533
+  train/n_updates: 580
+  train/clip_range: 0.2
+
+Iteration 122880:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0680083185434341
+  train/policy_gradient_loss: -0.0012060595094226302
+  train/value_loss: 16.057550543546675
+  train/approx_kl: 0.006110470741987228
+  train/clip_fraction: 0.00830078125
+  train/loss: 7.9789814949035645
+  train/explained_variance: 0.358584463596344
+  train/n_updates: 590
+  train/clip_range: 0.2
+
+Iteration 124928:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0712071545422077
+  train/policy_gradient_loss: -0.00016481877100886776
+  train/value_loss: 14.947387585043908
+  train/approx_kl: 0.002517691347748041
+  train/clip_fraction: 0.000439453125
+  train/loss: 5.215292453765869
+  train/explained_variance: 0.3666195869445801
+  train/n_updates: 600
+  train/clip_range: 0.2
+
+Iteration 126976:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0626309160143137
+  train/policy_gradient_loss: -0.0032479800516739487
+  train/value_loss: 15.85725283920765
+  train/approx_kl: 0.008556419052183628
+  train/clip_fraction: 0.049462890625
+  train/loss: 8.235649108886719
+  train/explained_variance: 0.365139365196228
+  train/n_updates: 610
+  train/clip_range: 0.2
+
+Iteration 129024:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0796045776456595
+  train/policy_gradient_loss: -0.00047442969516851006
+  train/value_loss: 16.062259390950203
+  train/approx_kl: 0.008449312299489975
+  train/clip_fraction: 0.027685546875
+  train/loss: 9.590434074401855
+  train/explained_variance: 0.36269789934158325
+  train/n_updates: 620
+  train/clip_range: 0.2
+
+Iteration 131072:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0797958709299564
+  train/policy_gradient_loss: -0.004431117631611414
+  train/value_loss: 16.611279863119126
+  train/approx_kl: 0.012329223565757275
+  train/clip_fraction: 0.0822265625
+  train/loss: 9.307767868041992
+  train/explained_variance: 0.34309953451156616
+  train/n_updates: 630
+  train/clip_range: 0.2
+
+Iteration 133120:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0896399281919003
+  train/policy_gradient_loss: -0.0020146987662883475
+  train/value_loss: 16.270671674609183
+  train/approx_kl: 0.009836899116635323
+  train/clip_fraction: 0.032958984375
+  train/loss: 9.095702171325684
+  train/explained_variance: 0.3656604290008545
+  train/n_updates: 640
+  train/clip_range: 0.2
+
+Iteration 135168:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.093050930276513
+  train/policy_gradient_loss: -0.002249170609866269
+  train/value_loss: 15.344666904211044
+  train/approx_kl: 0.008653543889522552
+  train/clip_fraction: 0.001513671875
+  train/loss: 7.201513767242432
+  train/explained_variance: 0.3732060194015503
+  train/n_updates: 650
+  train/clip_range: 0.2
+
+Iteration 137216:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.090391742065549
+  train/policy_gradient_loss: -0.0006297271567746066
+  train/value_loss: 15.017486448585988
+  train/approx_kl: 0.008144086226820946
+  train/clip_fraction: 0.022412109375
+  train/loss: 7.234801769256592
+  train/explained_variance: 0.3659951686859131
+  train/n_updates: 660
+  train/clip_range: 0.2
+
+Iteration 139264:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0960834227502345
+  train/policy_gradient_loss: -0.00026746588409878316
+  train/value_loss: 15.336343851685523
+  train/approx_kl: 0.011703159660100937
+  train/clip_fraction: 0.028271484375
+  train/loss: 6.479674339294434
+  train/explained_variance: 0.3624003529548645
+  train/n_updates: 670
+  train/clip_range: 0.2
+
+Iteration 141312:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0969521172344685
+  train/policy_gradient_loss: -0.006569901428883895
+  train/value_loss: 16.021003299951552
+  train/approx_kl: 0.011181297712028027
+  train/clip_fraction: 0.09140625
+  train/loss: 6.843145847320557
+  train/explained_variance: 0.3646044135093689
+  train/n_updates: 680
+  train/clip_range: 0.2
+
+Iteration 143360:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.097199710085988
+  train/policy_gradient_loss: -0.0008891229343134909
+  train/value_loss: 14.858056645095349
+  train/approx_kl: 0.008093108423054218
+  train/clip_fraction: 0.0
+  train/loss: 9.437492370605469
+  train/explained_variance: 0.36838287115097046
+  train/n_updates: 690
+  train/clip_range: 0.2
+
+Iteration 145408:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0913669154047967
+  train/policy_gradient_loss: -0.0009511665237369015
+  train/value_loss: 14.950158306956292
+  train/approx_kl: 0.007680827286094427
+  train/clip_fraction: 0.01201171875
+  train/loss: 7.125702857971191
+  train/explained_variance: 0.3693675994873047
+  train/n_updates: 700
+  train/clip_range: 0.2
+
+Iteration 147456:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.074424921348691
+  train/policy_gradient_loss: -0.0024921284290030598
+  train/value_loss: 14.339725595712661
+  train/approx_kl: 0.008322533220052719
+  train/clip_fraction: 0.023095703125
+  train/loss: 9.017518997192383
+  train/explained_variance: 0.37550830841064453
+  train/n_updates: 710
+  train/clip_range: 0.2
+
+Iteration 149504:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0844893664121629
+  train/policy_gradient_loss: -0.00047242200671462344
+  train/value_loss: 14.314428940415382
+  train/approx_kl: 0.002490842016413808
+  train/clip_fraction: 0.019482421875
+  train/loss: 5.039679050445557
+  train/explained_variance: 0.37074989080429077
+  train/n_updates: 720
+  train/clip_range: 0.2
+
+Iteration 151552:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0856656819581985
+  train/policy_gradient_loss: 3.397354448679835e-05
+  train/value_loss: 15.369321247935295
+  train/approx_kl: 0.0006491613457910717
+  train/clip_fraction: 0.0
+  train/loss: 7.739197254180908
+  train/explained_variance: 0.3641479015350342
+  train/n_updates: 730
+  train/clip_range: 0.2
+
+Iteration 153600:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0685885652899743
+  train/policy_gradient_loss: -0.000960703965392895
+  train/value_loss: 15.649721676111222
+  train/approx_kl: 0.01328345574438572
+  train/clip_fraction: 0.022119140625
+  train/loss: 9.603893280029297
+  train/explained_variance: 0.37383002042770386
+  train/n_updates: 740
+  train/clip_range: 0.2
+
+Iteration 155648:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0818618904799222
+  train/policy_gradient_loss: -0.0013293998359586111
+  train/value_loss: 15.13806859999895
+  train/approx_kl: 0.01458113081753254
+  train/clip_fraction: 0.034521484375
+  train/loss: 5.5389404296875
+  train/explained_variance: 0.3665277361869812
+  train/n_updates: 750
+  train/clip_range: 0.2
+
+Iteration 157696:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0955234859138727
+  train/policy_gradient_loss: -0.00440067580784671
+  train/value_loss: 15.629490566253661
+  train/approx_kl: 0.013304155319929123
+  train/clip_fraction: 0.073193359375
+  train/loss: 6.067582607269287
+  train/explained_variance: 0.363145112991333
+  train/n_updates: 760
+  train/clip_range: 0.2
+
+Iteration 159744:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0773244220763445
+  train/policy_gradient_loss: -0.0022873474343214186
+  train/value_loss: 16.09313260912895
+  train/approx_kl: 0.012904089875519276
+  train/clip_fraction: 0.023291015625
+  train/loss: 7.848237037658691
+  train/explained_variance: 0.36097216606140137
+  train/n_updates: 770
+  train/clip_range: 0.2
+
+Iteration 161792:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0843321293592454
+  train/policy_gradient_loss: -0.002983353877789341
+  train/value_loss: 17.266079264879227
+  train/approx_kl: 0.007786199450492859
+  train/clip_fraction: 0.012158203125
+  train/loss: 8.705273628234863
+  train/explained_variance: 0.354736328125
+  train/n_updates: 780
+  train/clip_range: 0.2
+
+Iteration 163840:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0896800197660923
+  train/policy_gradient_loss: -0.00025244429125450554
+  train/value_loss: 18.230912366509436
+  train/approx_kl: 0.005288820713758469
+  train/clip_fraction: 0.0
+  train/loss: 8.994279861450195
+  train/explained_variance: 0.3330347537994385
+  train/n_updates: 790
+  train/clip_range: 0.2
+
+Iteration 165888:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0847336273640393
+  train/policy_gradient_loss: -0.002440383518114686
+  train/value_loss: 17.01408683657646
+  train/approx_kl: 0.011948749423027039
+  train/clip_fraction: 0.021484375
+  train/loss: 7.671508312225342
+  train/explained_variance: 0.36347150802612305
+  train/n_updates: 800
+  train/clip_range: 0.2
+
+Iteration 167936:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0943691302090883
+  train/policy_gradient_loss: -0.00877660600526724
+  train/value_loss: 18.522209045290946
+  train/approx_kl: 0.016187475994229317
+  train/clip_fraction: 0.0849609375
+  train/loss: 8.980485916137695
+  train/explained_variance: 0.3531494736671448
+  train/n_updates: 810
+  train/clip_range: 0.2
+
+Iteration 169984:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0885232020169497
+  train/policy_gradient_loss: -0.0019155521120410412
+  train/value_loss: 17.89772499501705
+  train/approx_kl: 0.008252747356891632
+  train/clip_fraction: 0.032763671875
+  train/loss: 8.071063041687012
+  train/explained_variance: 0.3635472059249878
+  train/n_updates: 820
+  train/clip_range: 0.2
+
+Iteration 172032:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0908637009561062
+  train/policy_gradient_loss: -0.003449871504562907
+  train/value_loss: 16.539360219240187
+  train/approx_kl: 0.006307903211563826
+  train/clip_fraction: 0.026806640625
+  train/loss: 7.85250997543335
+  train/explained_variance: 0.3721006512641907
+  train/n_updates: 830
+  train/clip_range: 0.2
+
+Iteration 174080:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0901632253080606
+  train/policy_gradient_loss: -0.0025919306004652753
+  train/value_loss: 16.237727761268616
+  train/approx_kl: 0.009293471463024616
+  train/clip_fraction: 0.0380859375
+  train/loss: 7.415661334991455
+  train/explained_variance: 0.3676148056983948
+  train/n_updates: 840
+  train/clip_range: 0.2
+
+Iteration 176128:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.094721957296133
+  train/policy_gradient_loss: -0.00014844160177744924
+  train/value_loss: 15.22076396048069
+  train/approx_kl: 0.0015648134285584092
+  train/clip_fraction: 0.0
+  train/loss: 8.30391788482666
+  train/explained_variance: 0.37003809213638306
+  train/n_updates: 850
+  train/clip_range: 0.2
+
+Iteration 178176:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.093182471767068
+  train/policy_gradient_loss: -0.0013378765084780752
+  train/value_loss: 16.266630864143373
+  train/approx_kl: 0.008358139544725418
+  train/clip_fraction: 0.011181640625
+  train/loss: 11.840192794799805
+  train/explained_variance: 0.36323636770248413
+  train/n_updates: 860
+  train/clip_range: 0.2
+
+Iteration 180224:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0971900407224893
+  train/policy_gradient_loss: -0.003564287640620023
+  train/value_loss: 16.61286306679249
+  train/approx_kl: 0.007426962722092867
+  train/clip_fraction: 0.0369140625
+  train/loss: 11.712562561035156
+  train/explained_variance: 0.36683690547943115
+  train/n_updates: 870
+  train/clip_range: 0.2
+
+Iteration 182272:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.090819673985243
+  train/policy_gradient_loss: -0.0016718556071282364
+  train/value_loss: 16.501338651776315
+  train/approx_kl: 0.010157760232686996
+  train/clip_fraction: 0.02666015625
+  train/loss: 7.955399990081787
+  train/explained_variance: 0.36770790815353394
+  train/n_updates: 880
+  train/clip_range: 0.2
+
+Iteration 184320:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.085120353475213
+  train/policy_gradient_loss: -0.0005156986560905352
+  train/value_loss: 16.668772742152214
+  train/approx_kl: 0.005908560939133167
+  train/clip_fraction: 0.0
+  train/loss: 6.784937381744385
+  train/explained_variance: 0.3638226389884949
+  train/n_updates: 890
+  train/clip_range: 0.2
+
+Iteration 186368:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0953923244029284
+  train/policy_gradient_loss: -0.0035933063219999893
+  train/value_loss: 15.927578464150429
+  train/approx_kl: 0.007394042797386646
+  train/clip_fraction: 0.038134765625
+  train/loss: 8.784102439880371
+  train/explained_variance: 0.3727293014526367
+  train/n_updates: 900
+  train/clip_range: 0.2
+
+Iteration 188416:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0945957466959952
+  train/policy_gradient_loss: -0.002464756526751444
+  train/value_loss: 15.794531872868538
+  train/approx_kl: 0.009463304653763771
+  train/clip_fraction: 0.034033203125
+  train/loss: 9.07929801940918
+  train/explained_variance: 0.358181893825531
+  train/n_updates: 910
+  train/clip_range: 0.2
+
+Iteration 190464:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.093061723932624
+  train/policy_gradient_loss: 0.0002062182902591303
+  train/value_loss: 15.089218650758266
+  train/approx_kl: 0.0004350030212663114
+  train/clip_fraction: 0.0
+  train/loss: 8.565878868103027
+  train/explained_variance: 0.3587321639060974
+  train/n_updates: 920
+  train/clip_range: 0.2
+
+Iteration 192512:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0971227657049893
+  train/policy_gradient_loss: -0.001973741824622266
+  train/value_loss: 15.550341805815696
+  train/approx_kl: 0.006905802525579929
+  train/clip_fraction: 0.03388671875
+  train/loss: 8.105432510375977
+  train/explained_variance: 0.3609577417373657
+  train/n_updates: 930
+  train/clip_range: 0.2
+
+Iteration 194560:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0934824876487255
+  train/policy_gradient_loss: -0.006847074313554913
+  train/value_loss: 15.666940888762474
+  train/approx_kl: 0.012536314316093922
+  train/clip_fraction: 0.093798828125
+  train/loss: 7.811193466186523
+  train/explained_variance: 0.3658445477485657
+  train/n_updates: 940
+  train/clip_range: 0.2
+
+Iteration 196608:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0942806746810674
+  train/policy_gradient_loss: -0.0018507186672650278
+  train/value_loss: 16.26823774278164
+  train/approx_kl: 0.013136802241206169
+  train/clip_fraction: 0.008544921875
+  train/loss: 9.418065071105957
+  train/explained_variance: 0.34891772270202637
+  train/n_updates: 950
+  train/clip_range: 0.2
+
+Iteration 198656:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0884980399161577
+  train/policy_gradient_loss: -0.003952996039879508
+  train/value_loss: 15.96274093389511
+  train/approx_kl: 0.012034401297569275
+  train/clip_fraction: 0.032373046875
+  train/loss: 8.307618141174316
+  train/explained_variance: 0.3592819571495056
+  train/n_updates: 960
+  train/clip_range: 0.2
+
+Iteration 200704:
+  train/learning_rate: 0.0003
+  train/entropy_loss: -1.0713517222553492
+  train/policy_gradient_loss: -0.0005612437176750973
+  train/value_loss: 17.589143034815788
+  train/approx_kl: 0.009568296372890472
+  train/clip_fraction: 0.003515625
+  train/loss: 10.241625785827637
+  train/explained_variance: 0.3242071270942688
+  train/n_updates: 970
+  train/clip_range: 0.2

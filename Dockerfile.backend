@@ -1,0 +1,63 @@
+# TRANSITION Backend Dockerfile
+# Multi-stage build for optimized image size
+
+FROM python:3.12-slim AS base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies required for geospatial libraries and Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    swig \
+    libgeos-dev \
+    libproj-dev \
+    libgdal-dev \
+    gdal-bin \
+    libspatialindex-dev \
+    libhdf5-dev \
+    libnetcdf-dev \
+    git \
+    pkg-config \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set GDAL environment variables
+ENV GDAL_CONFIG=/usr/bin/gdal-config \
+    CPLUS_INCLUDE_PATH=/usr/include/gdal \
+    C_INCLUDE_PATH=/usr/include/gdal
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ ./backend/
+COPY use_cases/ ./use_cases/
+COPY llm_interface/ ./llm_interface/
+COPY data ./data/
+
+# Note: .env file is provided via docker-compose environment variables
+# No need to copy .env into the image
+
+# Create necessary directories
+RUN mkdir -p /app/results /app/logs /app/temp
+
+# Expose backend port
+EXPOSE 8003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('https://transitionbackend.neuralio.ai/api/health')"
+
+# Run backend server on port 8003
+CMD ["python", "-m", "uvicorn", "backend.api.server:app", "--host", "0.0.0.0", "--port", "8003", "--reload", "--workers", "10"]

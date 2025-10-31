@@ -1,0 +1,109 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: esa-agents-backend
+    restart: unless-stopped
+    env_file: backend/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_DIR=/var/log/esa
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+      - ./logs/backend:/var/log/esa
+    networks:
+      - esa-agents
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: esa-agents-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./data/redis:/data   
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - esa-agents
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app/esa-chat-ui
+    volumes:
+      - ./frontend/esa-chat-ui:/app/esa-chat-ui
+      - ./frontend/esa-chat-ui/node_modules:/app/esa-chat-ui/node_modules
+    command: npm run dev
+    container_name: esa-agents-frontend
+    restart: unless-stopped
+    networks:
+      - esa-agents
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KC_DB_URL_DATABASE}
+      POSTGRES_USER: ${KC_DB_USERNAME}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks: [esa-agents]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.1
+    container_name: keycloak
+    restart: unless-stopped
+    env_file: backend/.env
+    command:
+      - start
+      - --http-enabled=true
+      - --http-relative-path=${KC_HTTP_RELATIVE_PATH}
+      - --proxy-headers=xforwarded
+      - --hostname-strict=false
+    environment:
+      KC_DB: ${KC_DB}
+      KC_DB_URL_HOST: ${KC_DB_URL_HOST}
+      KC_DB_URL_DATABASE: ${KC_DB_URL_DATABASE}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # These two are the supported way to run behind a reverse proxy
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
+      # We’re serving KC under /keycloak
+      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
+      KC_HOSTNAME_URL: ${KC_HOSTNAME_URL}
+      KC_HOSTNAME_ADMIN_URL: ${KC_HOSTNAME_ADMIN_URL}
+    volumes:
+      - ./data/keycloak/providers:/opt/keycloak/providers   # custom providers
+      - ./data/keycloak/import:/opt/keycloak/data/import    # realm JSON import
+    depends_on: [keycloak-db]
+    networks: [esa-agents]
+    # Keycloak listens on 8080 internally; we don't need to publish it directly because Nginx will front it
+
+  nginx:
+    image: nginx:alpine
+    container_name: esa-agents-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - keycloak
+    networks:
+      - esa-agents
+
+networks:
+  esa-agents:
+    name: esa-agents
+    driver: bridge

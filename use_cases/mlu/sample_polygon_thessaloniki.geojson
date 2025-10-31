@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sample Thessaloniki Sub-Region",
+        "description": "Example polygon for testing spatial filtering (smaller area within Thessaloniki bounds)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [22.6, 40.5],
+            [22.8, 40.5],
+            [22.8, 40.7],
+            [22.6, 40.7],
+            [22.6, 40.5]
+          ]
+        ]
+      }
+    }
+  ]
+}

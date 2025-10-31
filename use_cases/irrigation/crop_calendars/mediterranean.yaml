@@ -1,0 +1,131 @@
+# Crop Calendar for Mediterranean Climate Zone
+# Applicable regions: Greece, Southern Italy, Spain, Portugal, Southern France
+
+# ==============================================================================
+# SUMMER CROPS (sown in spring, harvested in late summer/autumn)
+# ==============================================================================
+summer_crops:
+  - name: "RICE"
+    description: "Flooded rice paddies (requires continuous flooding)"
+
+    # Sowing window (day of year)
+    sowing_window:
+      start: 120  # May 1 (day 121 in non-leap years)
+      end: 150    # May 30
+
+    # Harvest window (day of year)
+    harvest_window:
+      start: 240  # September 1
+      end: 270    # September 30
+
+    # Flooding requirements
+    flooding_required: true
+    flooding_months: [5, 6, 7, 8, 9]  # May through September
+    flooding_depth_mm: 50  # Continuous 50mm water layer
+
+    # Water requirements (approximate for AquaCrop)
+    total_irrigation_mm: 1200  # ~1200mm for flooded rice
+    irrigation_method: "continuous_flooding"
+
+  - name: "MAIZE"
+    description: "Corn (supplemental irrigation)"
+
+    sowing_window:
+      start: 90   # April 1
+      end: 120    # May 1
+
+    harvest_window:
+      start: 240  # September 1
+      end: 270    # September 30
+
+    flooding_required: false
+
+    # Water requirements
+    total_irrigation_mm: 400  # ~400mm supplemental irrigation
+    irrigation_method: "deficit"
+
+  - name: "COTTON"
+    description: "Cotton (drought-tolerant, minimal irrigation)"
+
+    sowing_window:
+      start: 105  # April 15
+      end: 135    # May 15
+
+    harvest_window:
+      start: 240  # September 1
+      end: 270    # September 30
+
+    flooding_required: false
+
+    # Water requirements
+    total_irrigation_mm: 300  # ~300mm minimal irrigation
+    irrigation_method: "deficit"
+
+# ==============================================================================
+# WINTER CROPS (sown in autumn, harvested in early summer)
+# ==============================================================================
+winter_crops:
+  - name: "WINTER_WHEAT"
+    description: "Wheat (mostly rainfed, minimal irrigation)"
+
+    sowing_window:
+      start: 275  # October 1
+      end: 305    # November 1
+
+    harvest_window:
+      start: 150  # June 1
+      end: 180    # June 30
+
+    flooding_required: false
+
+    # Water requirements (mostly from rainfall)
+    total_irrigation_mm: 100  # ~100mm supplemental if rainfall is low
+    irrigation_method: "rainfed"
+
+# ==============================================================================
+# CLASSIFICATION WINDOWS (when to check for bare soil using NDVI)
+# ==============================================================================
+classification_windows:
+  # End of summer: Check for bare soil in July-August
+  # This detects parcels that will be sown with winter crops
+  end_of_summer:
+    start: 210  # July 29
+    end: 240    # August 28
+    description: "Detect bare soil after summer harvest → assign winter crop"
+
+  # End of winter: Check for bare soil in January-February
+  # This detects parcels that will be sown with summer crops
+  end_of_winter:
+    start: 15   # January 15
+    end: 45     # February 14
+    description: "Detect bare soil after winter harvest → assign summer crop"
+
+# ==============================================================================
+# CROP ROTATION RULES (region-specific probabilities)
+# ==============================================================================
+crop_rotation:
+  # Summer-to-winter rule (deterministic)
+  summer_to_winter:
+    rule: "IF bare_in_summer THEN assign WINTER_WHEAT"
+    crop: "WINTER_WHEAT"
+    probability: 1.0  # Deterministic
+
+  # Winter-to-summer rule (stochastic)
+  winter_to_summer:
+    rule: "IF bare_in_winter THEN probabilistically assign summer crop"
+    crops:
+      - name: "MAIZE"
+        probability: 0.4  # 40% chance
+      - name: "COTTON"
+        probability: 0.4  # 40% chance
+      - name: "RICE"
+        probability: 0.2  # 20% chance (rice is less common, requires flooding infrastructure)
+
+# ==============================================================================
+# REGIONAL NOTES
+# ==============================================================================
+# - Rice cultivation is concentrated in Northern Greece (Thessaloniki plain),
+#   Po Valley (Italy), Ebro Delta (Spain), and Camargue (France)
+# - Maize is widespread across all Mediterranean regions
+# - Cotton is more common in Greece, Spain, and Southern Italy
+# - Winter wheat is predominantly rainfed (minimal irrigation needs)

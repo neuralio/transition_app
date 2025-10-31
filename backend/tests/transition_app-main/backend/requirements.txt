@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-dotenv
+
+mistralai
+redis
+requests
+shapely
+pyproj
+
+python-jose[cryptography]
+pydantic[email]

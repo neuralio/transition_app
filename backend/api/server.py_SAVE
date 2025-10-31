@@ -1,0 +1,500 @@
+"""
+FastAPI server for TRANSITION backend.
+Provides HTTP API endpoints for the LLM interface and simulations.
+"""
+
+import sys
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+import subprocess
+import json
+import re
+from typing import List, Optional
+
+# Import sentinel router
+from backend.api.routes.sentinel import router as sentinel_router
+
+app = FastAPI(
+    title="TRANSITION API",
+    description="EO-Informed Agent Based Models for Digital Twins Applications",
+    version="1.0.0"
+)
+
+# Register routers
+app.include_router(sentinel_router, prefix="/api/sentinel", tags=["sentinel"])
+
+# Configure CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://159.69.72.104:3000", "https://transitionapp.neuralio.ai", "https://transitionbackend.neuralio.ai"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class QueryRequest(BaseModel):
+    query: Optional[str] = None  # For /api/query endpoint
+    message: Optional[str] = None  # For /api/chat endpoint (alias)
+    geojson: Optional[str] = None  # Optional GeoJSON for spatial filtering
+
+    @property
+    def query_text(self) -> str:
+        """Get query text from either 'query' or 'message' field"""
+        return self.query or self.message or ""
+
+class FileInfo(BaseModel):
+    path: str
+    type: str  # 'html', 'png', 'json', 'csv'
+    name: str
+    title: Optional[str] = None  # Extracted title from HTML or friendly name
+
+class QueryResponse(BaseModel):
+    model_config = {"json_schema_extra": {"exclude_none": False}}
+
+    response: str
+    summary: Optional[str] = None
+    files: List[FileInfo] = []
+    metadata: dict = {}
+    defaults_notification: Optional[str] = None  # Extracted defaults message for frontend
+    ai_insights: Optional[str] = None  # AI-generated insights from LLM analysis
+
+@app.get("/")
+async def root():
+    """Health check endpoint"""
+    return {
+        "status": "running",
+        "service": "TRANSITION API",
+        "version": "1.0.0"
+    }
+
+@app.get("/api/health")
+async def health():
+    """Health check for API"""
+    return {"status": "healthy"}
+
+@app.post("/api/chat")
+async def process_chat(request: QueryRequest):
+    """
+    Process chat message from frontend (alias for /api/query).
+    Accepts both message text and optional GeoJSON for spatial filtering.
+    """
+    return await process_query(request)
+
+@app.post("/api/query")
+async def process_query(request: QueryRequest):
+    """
+    Process natural language query using TRANSITION LLM interface.
+
+    This endpoint calls the transition_agent.py script and returns the result.
+    """
+    try:
+        # Path to LLM interface script
+        llm_interface_path = project_root / "llm_interface" / "transition_agent.py"
+
+        if not llm_interface_path.exists():
+            raise HTTPException(
+                status_code=500,
+                detail=f"LLM interface script not found at {llm_interface_path}"
+            )
+
+        # Capture timestamp BEFORE running query (to find only NEW files)
+        import time
+        import tempfile
+        query_start_time = time.time()
+
+        # Handle GeoJSON if provided
+        geojson_file_path = None
+        print(f"🔍 DEBUG: Full request model dump: {request.model_dump()}")
+        print(f"🔍 DEBUG: request.query = {request.query}")
+        print(f"🔍 DEBUG: request.message = {request.message}")
+        print(f"🔍 DEBUG: request.geojson exists? {request.geojson is not None}")
+        if request.geojson:
+            print(f"🔍 DEBUG: GeoJSON length: {len(request.geojson)} characters")
+            print(f"🔍 DEBUG: GeoJSON preview: {request.geojson[:200]}")
+            # Save GeoJSON to temporary file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.geojson', delete=False) as tmp:
+                tmp.write(request.geojson)
+                geojson_file_path = tmp.name
+            print(f"📍 GeoJSON saved to temporary file: {geojson_file_path}")
+        else:
+            print(f"⚠️ WARNING: No GeoJSON provided in request!")
+
+        # Build command with optional geojson file
+        cmd = ["python", str(llm_interface_path), request.query_text]
+        if geojson_file_path:
+            cmd.extend(["--geojson-file", geojson_file_path])
+
+        # Run the transition agent with the query
+        # Just use "python" - it will use the one from the active virtual environment
+        # NO TIMEOUT for long-running phenology analysis (can take hours for multi-month periods)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=None  # No timeout - allow long-running EO downloads
+        )
+
+        # DO NOT delete temp file here - nested subprocesses still need it!
+        # The OS will clean up /tmp files automatically
+        # if geojson_file_path and os.path.exists(geojson_file_path):
+        #     os.remove(geojson_file_path)
+        #     print(f"🗑️ Cleaned up temporary GeoJSON file")
+
+        # Log subprocess output to terminal for debugging
+        if result.stdout:
+            print(f"\n{'='*80}")
+            print(f"SUBPROCESS OUTPUT:")
+            print(f"{'='*80}")
+            print(result.stdout)
+            print(f"{'='*80}\n")
+        if result.stderr:
+            print(f"\n{'='*80}")
+            print(f"SUBPROCESS STDERR:")
+            print(f"{'='*80}")
+            print(result.stderr)
+            print(f"{'='*80}\n")
+
+        # Check for errors - both stderr and returncode
+        has_error = result.returncode != 0
+
+        # For user-facing output, use ONLY stdout (stderr contains debug messages)
+        output_text = result.stdout
+
+        if has_error:
+            # For errors, extract ONLY the error message (lines with ❌ and following lines)
+            # stderr contains debug info - keep it in terminal logs only
+            error_lines = []
+            found_error = False
+
+            for line in output_text.split('\n'):
+                if '❌' in line:
+                    found_error = True
+                    error_lines.append(line.strip())
+                elif found_error and line.strip():
+                    # Include lines after ❌ until we hit a separator or empty line
+                    if line.strip().startswith('===') or line.strip().startswith('---'):
+                        break
+                    error_lines.append(line.strip())
+                elif found_error and not line.strip():
+                    # Stop at first empty line after error
+                    break
+
+            error_msg = '\n'.join(error_lines) if error_lines else output_text.strip()
+            summary_line = error_lines[0] if error_lines else "Error occurred"
+
+            return QueryResponse(
+                response=error_msg,  # Only the error message
+                summary=summary_line,  # First error line
+                files=[],
+                metadata={"error": True, "error_type": "validation"}
+            )
+
+        # Parse the output
+        output = result.stdout.strip()
+
+        # Extract file paths ONLY from output - NO automatic directory scanning
+        files = []
+        found_paths = set()
+
+        # ONLY find files explicitly mentioned in output
+        file_patterns = [
+            (r'(?:Saved to|saved:|output:|File:|generated:)\s*([^\s\n]+\.(?:html|png|json|csv|txt))'),
+            (r'(results/[^\s\n]+\.(?:html|png|json|csv|txt))'),
+            (r'(use_cases/[^\s\n]+/results[^\s\n]+\.(?:html|png|json|csv|txt))'),
+        ]
+
+        for pattern in file_patterns:
+            matches = re.finditer(pattern, output, re.IGNORECASE)
+            for match in matches:
+                file_path = match.group(1)
+                if not file_path.startswith('/'):
+                    file_path = str(project_root / file_path)
+                if Path(file_path).exists():
+                    found_paths.add(file_path)
+
+        # Convert to FileInfo objects and extract titles
+        # Sort: TXT files first, then HTML, then others (to show results.txt at top)
+        def file_sort_key(path):
+            """Sort files: .txt first, then .html, then others (alphabetically within each group)"""
+            ext = Path(path).suffix.lower()
+            if ext == '.txt':
+                return (0, path)  # TXT files first
+            elif ext == '.html':
+                return (1, path)  # HTML second
+            elif ext == '.png':
+                return (2, path)  # PNG third
+            elif ext == '.csv':
+                return (3, path)  # CSV fourth
+            else:
+                return (4, path)  # Everything else last
+
+        for file_path in sorted(found_paths, key=file_sort_key):
+            file_type = file_path.split('.')[-1]
+            file_name = Path(file_path).name
+
+            # Skip *_plotly.json files (they're embedded in HTML, no need to show separately)
+            if file_name.endswith('_plotly.json'):
+                continue
+
+            # Extract title from HTML files
+            title = None
+            if file_type == 'html':
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read(5000)  # Read first 5KB
+                        # Try to find <title> tag
+                        title_match = re.search(r'<title[^>]*>(.*?)</title>', content, re.IGNORECASE | re.DOTALL)
+                        if title_match:
+                            title = title_match.group(1).strip()
+                        # Also try to find h1, h2 tags as fallback
+                        if not title or 'plotly' in title.lower():
+                            h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', content, re.IGNORECASE | re.DOTALL)
+                            if h1_match:
+                                title = re.sub(r'<[^>]+>', '', h1_match.group(1)).strip()
+                except:
+                    pass
+
+            # Fallback: create friendly title from filename
+            if not title:
+                title = (file_name
+                    .replace('_', ' ')
+                    .replace('-', ' ')
+                    .replace('.html', '')
+                    .replace('.png', '')
+                    .replace('.txt', '')
+                    .replace('.csv', '')
+                    .replace(' plotly.json', '')
+                    .replace('.json', '')
+                    .title())
+
+            # Extract scenario from path if not in filename (for RL comparison files)
+            scenario_map = {
+                'rcp26': 'Optimistic',
+                'rcp45': 'Moderate',
+                'rcp85': 'Pessimistic'
+            }
+            scenario_from_path = None
+            for rcp_code, friendly_name in scenario_map.items():
+                if f'/{rcp_code}/' in file_path.lower() or f'\\{rcp_code}\\' in file_path.lower():
+                    scenario_from_path = friendly_name
+                    break
+
+            # If scenario found in path, prepend to title
+            if scenario_from_path and scenario_from_path.lower() not in title.lower():
+                title = f"{scenario_from_path} {title}"
+
+            # Replace scenario codes with user-friendly names in title text
+            for rcp_code, friendly_name in scenario_map.items():
+                # Case insensitive replacement
+                title = re.sub(rf'\b{rcp_code}\b', friendly_name, title, flags=re.IGNORECASE)
+
+            title = re.sub(r'\s+', ' ', title).strip()  # Remove extra spaces
+            # Remove "Plotly" word from title
+            title = title.replace('Plotly', '').strip()
+
+            files.append(FileInfo(
+                path=file_path,
+                type=file_type,
+                name=file_name,
+                title=title
+            ))
+
+        # Extract summary from output
+        # If this is a chat response (no files found), use the full cleaned output
+        if len(found_paths) == 0:
+            # For chat responses, extract everything after "RESPONSE" section
+            if "RESPONSE" in output:
+                # Find the last === line after RESPONSE
+                lines = output.split('\n')
+                response_found = False
+                separator_found = False
+                content_lines = []
+
+                for line in lines:
+                    if 'RESPONSE' in line:
+                        response_found = True
+                        continue
+                    if response_found and line.startswith('==='):
+                        separator_found = True
+                        continue
+                    if separator_found:
+                        content_lines.append(line)
+
+                summary = '\n'.join(content_lines).strip()
+            else:
+                # Fallback: filter out technical lines
+                summary_lines = []
+                for line in output.split('\n'):
+                    if line.strip() and not any(x in line for x in ['===', '💬 You:', '🤖', '✅ GPT-4', 'Tool:', 'Parsed Parameters']):
+                        summary_lines.append(line.strip())
+                summary = '\n'.join(summary_lines).strip() if summary_lines else output.strip()
+        else:
+            # For simulation responses with files, don't show any text summary
+            # The files/plots speak for themselves
+            summary = None
+
+        # Try to extract structured data if JSON is present
+        metadata = {}
+        try:
+            if "{" in output and "}" in output:
+                json_start = output.find("{")
+                json_end = output.rfind("}") + 1
+                json_str = output[json_start:json_end]
+                metadata = json.loads(json_str)
+        except:
+            pass
+
+        # Extract defaults notification message (if present)
+        defaults_notification = None
+        for line in output.split('\n'):
+            stripped = line.strip()
+            # Check for the defaults message (look for the text anywhere in the line)
+            if "Using default values:" in stripped:
+                defaults_notification = stripped
+                break
+
+        # Extract AI-Generated Insights section
+        ai_insights = None
+        if "📊 AI-Generated Insights:" in output:
+            print(f"[DEBUG] Found AI insights marker in output")
+            lines = output.split('\n')
+            insights_found = False
+            insights_lines = []
+            for line in lines:
+                if "📊 AI-Generated Insights:" in line:
+                    insights_found = True
+                    continue
+                if insights_found:
+                    if line.startswith('==='):
+                        break
+                    if line.strip():
+                        insights_lines.append(line)
+            if insights_lines:
+                ai_insights = '\n'.join(insights_lines).strip()
+                print(f"[DEBUG] Extracted {len(insights_lines)} lines of insights")
+                print(f"[DEBUG] First 100 chars: {ai_insights[:100]}")
+            else:
+                print(f"[DEBUG] No insight lines found")
+        else:
+            print(f"[DEBUG] AI insights marker NOT found in output")
+
+        result = {
+            "response": output,
+            "summary": summary,
+            "files": files,
+            "metadata": metadata,
+            "defaults_notification": defaults_notification,
+            "ai_insights": ai_insights
+        }
+
+        print(f"[DEBUG] Returning ai_insights in response: {ai_insights is not None}")
+        if ai_insights:
+            print(f"[DEBUG] ai_insights length: {len(ai_insights)}")
+
+        return result
+
+    except subprocess.TimeoutExpired:
+        # This should never happen since timeout=None, but keep for safety
+        raise HTTPException(
+            status_code=504,
+            detail="Query processing timeout - if running phenology analysis for long periods (months), this may take hours"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@app.get("/api/files/{file_path:path}")
+async def serve_file(file_path: str):
+    """Serve generated result files (HTML, PNG, JSON, CSV)"""
+    try:
+        # Security: ensure file is within project directory
+        full_path = Path(file_path)
+        if not full_path.is_absolute():
+            full_path = project_root / file_path
+
+        # Check if file exists and is within project
+        if not full_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        if not str(full_path).startswith(str(project_root)):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        return FileResponse(full_path)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scenarios")
+async def list_scenarios():
+    """List available climate scenarios"""
+    return {
+        "scenarios": [
+            {
+                "id": "optimistic",
+                "name": "Optimistic (Low Warming ~2°C)",
+                "rcp": "rcp26"
+            },
+            {
+                "id": "moderate",
+                "name": "Moderate (Medium Warming ~3°C)",
+                "rcp": "rcp45"
+            },
+            {
+                "id": "pessimistic",
+                "name": "Pessimistic (High Warming ~4-5°C)",
+                "rcp": "rcp85"
+            }
+        ]
+    }
+
+@app.get("/api/use-cases")
+async def list_use_cases():
+    """List available use cases"""
+    return {
+        "use_cases": [
+            {
+                "id": "mlu",
+                "name": "Multi-Land Use",
+                "description": "Analyze land suitability and optimize resource allocation",
+                "status": "complete"
+            },
+            {
+                "id": "cca",
+                "name": "Climate Change Adaptation",
+                "description": "Simulate crop yields and PV adoption under climate change",
+                "status": "complete"
+            },
+            {
+                "id": "gcp",
+                "name": "Green Credit Policy",
+                "description": "Model impact of green subsidies on PV adoption",
+                "status": "planned"
+            }
+        ]
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+
+    # Run the server (use start_backend.sh for auto-reload)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
+    )

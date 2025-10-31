@@ -1,0 +1,44 @@
+# Modular Sentinel-2 processing pipeline configuration
+
+# Spatial parameters (filled from user-drawn polygons)
+# aoi: "examples/neuralio_bbox.geojson"  # Path to AOI file (GeoJSON/Shapefile)
+bbox: {{BBOX_PLACEHOLDER}}  # Will be replaced with [lon_min, lat_min, lon_max, lat_max] from UI
+target_crs: "EPSG:4326"
+
+# Temporal parameters (filled from calendar selection)
+start_date: "{{START_DATE_PLACEHOLDER}}"  # Will be replaced with user-selected start date (YYYY-MM-DD)
+end_date: "{{END_DATE_PLACEHOLDER}}"  # Will be replaced with user-selected end date (YYYY-MM-DD)
+max_scenes: 0   # Maximum number of scenes to process (0 = process ALL available scenes)
+
+# Processing parameters
+cloud_cover_threshold: 100.0  # Cloud cover threshold - 100 downloads ALL scenes
+ignore_cloud_filter: true     # Download all scenes regardless of cloud cover
+
+# STAC Configuration
+stac_url: "https://earth-search.aws.element84.com/v1"  # AWS - most reliable
+# Alternative STAC endpoints:
+# stac_url: "https://planetarycomputer.microsoft.com/api/stac/v1"  # Requires auth
+# stac_url: "https://catalogue.dataspace.copernicus.eu/stac"  # CDSE - limited query support
+
+# Output parameters (filled from backend with cache-specific directory)
+output_dir: "{{OUTPUT_DIR_PLACEHOLDER}}"
+compress: "lzw"
+
+# Index parameters
+indices_to_calculate: ["NDVI", "NDWI"] # Indices to calculate
+temporal_compositing: false  # Enable temporal compositing
+temporal_rule: "10D"        # Temporal interval: "10D" (dekadal) or "16D"
+temporal_reducer: "max"     # Reduction method: "max", "median", or "mean"
+
+# Processing options
+create_rgb: true
+create_cloud_masked_products: true
+save_individual_bands: true
+
+# Features enabled:
+# - Downloads ALL scenes regardless of cloud cover
+# - Generates both regular and cloud-free products using SCL filtering
+# - Unified directory structure: daily indices together, dekadal composites together
+# - Parameter aliases supported for backward compatibility (date_start->start_date, etc.)
+# - Improved NoData handling in RGB composites
+# - Proper mosaicking for multi-tile areas
